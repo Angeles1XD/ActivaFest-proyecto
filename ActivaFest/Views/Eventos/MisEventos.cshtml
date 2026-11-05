@@ -1,0 +1,98 @@
+@model List<Evento>
+@{
+    ViewData["Title"] = "Mis eventos";
+}
+
+<header class="cat-encabezado catalogo-encabezado">
+    <div>
+        <p class="cat-migas">Activa-Fest / Organizador</p>
+        <h1>Mis <span class="degradado">eventos</span></h1>
+        <p class="cat-subtitulo">Publica, edita y sigue el estado de revisión de tus eventos.</p>
+    </div>
+    <div class="panel-acciones">
+        <a asp-action="Crear" class="cat-boton">+ Crear evento</a>
+        <a asp-controller="Personal" asp-action="Index" class="btn-gris enlace-boton">🚪 Personal de control</a>
+    </div>
+</header>
+
+@if (!Model.Any())
+{
+    <div class="cat-vacio">
+        <p>Todavía no has publicado eventos.</p>
+        <a asp-action="Crear" class="cat-boton">Publicar mi primer evento</a>
+    </div>
+}
+
+<div class="grid-eventos grid-mis-eventos">
+@foreach (var item in Model)
+{
+    var finalizado = item.YaOcurrio(DateTime.Now);
+
+    <div class="card-evento @(finalizado ? "evento-finalizado" : "")">
+        @if (item.Imagenes.FirstOrDefault() is { } portada)
+        {
+            <img src="@portada.Ruta" alt="" class="miniatura-evento" loading="lazy" />
+        }
+        <span class="badge-estado badge-@item.Estado">@item.Estado</span>
+        @if (finalizado)
+        {
+            <span class="badge-estado badge-Finalizado">Finalizado</span>
+        }
+        @if (item.EsGratuito)
+        {
+            <span class="badge-estado badge-gratuito">🎉 Entrada libre</span>
+        }
+        <h3 style="margin-top:10px;">@item.Titulo</h3>
+
+        <p>📍 @item.Ubicacion</p>
+        <p>📅 @item.Fecha.ToString("dd/MM/yyyy HH:mm")</p>
+        <p>@item.Categoria?.Icono @item.Categoria?.Nombre</p>
+
+        @if (finalizado && item.Estado == EstadoEvento.Pendiente)
+        {
+            <p class="aviso-vencido">⚠ La fecha pasó antes de la revisión, por eso ya no se publicará. Crea el evento de nuevo con una fecha futura.</p>
+        }
+        else if (finalizado)
+        {
+            <p class="texto-suave">Este evento ya se realizó. Ya no aparece en el catálogo y su venta está cerrada.</p>
+        }
+        else if (item.PendientePagoPublicacion)
+        {
+            <p class="aviso-vencido" data-dato="pago-publicacion">💳 Falta pagar la publicación para que el administrador lo revise.</p>
+        }
+        else if (item.Estado == EstadoEvento.Pendiente)
+        {
+            <p class="texto-suave">En revisión por el equipo de ActivaFest.</p>
+        }
+        else if (item.Estado == EstadoEvento.Cancelado)
+        {
+            <p class="aviso-vencido">🚫 Cancelado. Motivo: @item.MotivoCancelacion</p>
+        }
+        else if (item.Estado == EstadoEvento.Rechazado)
+        {
+            <p class="texto-suave">Motivo: @item.MotivoRechazo</p>
+        }
+
+        <div class="acciones-evento">
+            <a asp-action="Detalle" asp-route-id="@item.Id" class="btn-rosa">Ver más →</a>
+            @if (item.PendientePagoPublicacion && !finalizado)
+            {
+                <a asp-controller="Publicacion" asp-action="Pagar" asp-route-id="@item.Id" class="btn-rosa enlace-boton">💳 Pagar publicación</a>
+            }
+            @if (!finalizado && item.Estado != EstadoEvento.Cancelado)
+            {
+                <a asp-action="Editar" asp-route-id="@item.Id" class="btn-gris enlace-boton">✏️ Editar</a>
+            }
+            @if (item.Estado == EstadoEvento.Aprobado)
+            {
+                <a asp-controller="Panel" asp-action="Evento" asp-route-id="@item.Id" class="btn-gris enlace-boton">📊 Panel</a>
+                @if (!finalizado && item.Estado != EstadoEvento.Cancelado)
+                {
+                    <a asp-controller="Destacados" asp-action="Contratar" asp-route-id="@item.Id" class="btn-gris enlace-boton">⭐ Destacar</a>
+                    <a asp-action="Cancelar" asp-route-id="@item.Id" class="btn-gris enlace-boton boton-peligro">🚫 Cancelar evento</a>
+                }
+            }
+        </div>
+    </div>
+}
+</div>

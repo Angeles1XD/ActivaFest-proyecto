@@ -1,0 +1,46 @@
+@model List<AuditoriaAnalitica>
+@{
+    ViewData["Title"] = "Auditoría de analítica";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Analítica / Auditoría</p>
+            <h1>Auditoría de <span class="degradado">analítica</span></h1>
+            <p class="cat-subtitulo">Registro de cada consulta a datos individuales de usuarios (Ley N.° 29733). Últimas 100 consultas.</p>
+        </div>
+        <a asp-action="Clientes" class="btn-gris enlace-boton">← Clientes</a>
+    </header>
+
+    <section class="tarjeta-panel">
+        @if (Model.Count == 0)
+        {
+            <p class="texto-tenue">Aún no hay consultas registradas.</p>
+        }
+        else
+        {
+            <div class="tabla-contenedor">
+                <table class="tabla-datos" id="tablaAuditoria">
+                    <thead><tr><th>Fecha</th><th>Administrador</th><th>Consulta</th><th>Fuente de datos</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in Model)
+                        {
+                            <tr>
+                                <td class="num">@a.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                <td>@(a.Administrador?.Email ?? a.AdministradorId)</td>
+                                <td>@a.Consulta</td>
+                                <td class="texto-tenue">@a.FuenteDatos</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

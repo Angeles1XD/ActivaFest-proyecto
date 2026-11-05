@@ -1,0 +1,81 @@
+@model (Entrada Entrada, Evento Evento, int Numero)
+@{
+    var e = Model.Entrada;
+    var vigente = e.VigenteParaIngreso(Model.Evento, DateTime.Now);
+    // Una entrada activa de un evento que ya terminó se muestra como finalizada
+    var claseEstado = e.Estado == EstadoEntrada.Activa && !vigente ? "Finalizada" : e.Estado.ToString();
+    var ubicacion = UbicacionEntrada.De(e);
+}
+
+@* La envoltura lleva la sombra de color y la inclinación 3D (entradas.js); el ticket recorta sus muescas *@
+<div class="entrada-envoltura @(vigente ? "vigente" : "")" style="--i: @Model.Numero">
+<article class="entrada-qr estado-@claseEstado">
+    <div class="entrada-cabecera">
+        <span class="entrada-zona">@e.TipoEntrada?.Nombre</span>
+        <span class="entrada-numero">#@Model.Numero</span>
+    </div>
+
+    <div class="entrada-qr-marco">
+        <img src="@Url.Action("Qr", "Entradas", new { id = e.Id })" alt="Código QR de la entrada @Model.Numero" width="220" height="220" loading="lazy" />
+    </div>
+
+    <p class="entrada-evento">@Model.Evento.Titulo</p>
+    <p class="entrada-fecha">@Formato.Fecha(Model.Evento.Fecha, "ddd dd MMM yyyy · HH:mm")</p>
+
+    @* HU27: zona, fila, asiento y puerta de ingreso *@
+    <dl class="entrada-ubicacion">
+        <div><dt>Zona</dt><dd>@ubicacion.Zona</dd></div>
+        @if (ubicacion.TieneAsiento)
+        {
+            <div><dt>Fila</dt><dd>@ubicacion.Fila</dd></div>
+            <div><dt>Asiento</dt><dd>@ubicacion.Numero</dd></div>
+        }
+    </dl>
+    @if (!string.IsNullOrEmpty(ubicacion.Puerta))
+    {
+        <p class="entrada-puerta">🚪 Ingresa por la <b>@ubicacion.Puerta</b></p>
+    }
+
+    <details class="entrada-plano" data-url="@Url.Action("Plano", "Entradas", new { id = e.Id })">
+        <summary>🗺️ Ver mi ubicación en el plano</summary>
+        <div class="plano-lienzo" aria-live="polite"><p class="texto-suave">Cargando el plano…</p></div>
+    </details>
+
+    @if (vigente)
+    {
+        <span class="entrada-estado">Activa</span>
+        <a href="@Url.Action("Qr", "Entradas", new { id = e.Id })" download class="entrada-descargar">Descargar QR</a>
+    }
+    else
+    {
+        <span class="entrada-estado">@(claseEstado switch { "Usada" => "Usada", "Anulada" => "Anulada", _ => "Evento finalizado" })</span>
+    }
+
+    @* HU33: después de ingresar, el asistente califica el trato de quien escaneó su entrada *@
+    @if (ViewData["Calificaciones"] is Dictionary<int, CalificacionPersonal> calificaciones && e.Estado == EstadoEntrada.Usada && e.ValidadoPorId != null)
+    {
+        if (calificaciones.TryGetValue(e.Id, out var calificacion))
+        {
+            <p class="calificacion-dada" data-dato="calificacion-dada">
+                Calificaste la atención en la puerta: <b>@(new string('★', calificacion.Puntaje))@(new string('☆', 5 - calificacion.Puntaje))</b>
+            </p>
+        }
+        else if (ActivaFest.Services.Acceso.ReputacionPersonalService.PuedeCalificar(e, e.UsuarioId, DateTime.Now))
+        {
+            <form asp-controller="Entradas" asp-action="Calificar" asp-route-id="@e.Id" method="post" class="form-calificar" data-dato="calificar">
+                <p>¿Cómo te atendieron en la puerta?</p>
+                <div class="estrellas" role="radiogroup" aria-label="Calificación de 1 a 5 estrellas">
+                    @for (var p = 5; p >= 1; p--)
+                    {
+                        <input type="radio" id="estrella-@e.Id-@p" name="puntaje" value="@p" required />
+                        <label for="estrella-@e.Id-@p" title="@p @(p == 1 ? "estrella" : "estrellas")">★</label>
+                    }
+                </div>
+                <textarea name="comentario" rows="2" maxlength="300" placeholder="Opcional: ¿te trataron con amabilidad y respeto?"></textarea>
+                <button type="submit" class="btn-gris">Enviar calificación</button>
+                <small class="texto-tenue">Es anónima: el personal no ve quién lo calificó.</small>
+            </form>
+        }
+    }
+</article>
+</div>

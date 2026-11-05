@@ -1,0 +1,72 @@
+@model Orden
+@{
+    ViewData["Title"] = "Confirmar compra";
+    var disponible = (bool)ViewBag.PasarelaDisponible;
+    var pendiente = Model.Estado == EstadoOrden.PendientePago && Model.FechaExpiracion > DateTime.UtcNow;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+}
+
+<div class="pagina-categorias pagina-compra">
+    <ol class="pasos" aria-label="Pasos de la compra">
+        <li class="hecho">Entradas</li>
+        <li class="actual" aria-current="step">Confirmar</li>
+        <li>Pago</li>
+        <li>¡Listo!</li>
+    </ol>
+
+    <div class="tarjeta-compra">
+        <h1>Confirma tu compra</h1>
+
+        <partial name="_ResumenOrden" model="Model" />
+
+        @if (pendiente)
+        {
+            <p class="reserva">
+                ⏳ Tus entradas están reservadas por
+                <b id="relojReserva" data-vence="@DateTime.SpecifyKind(Model.FechaExpiracion, DateTimeKind.Utc).ToString("o")">--:--</b>
+            </p>
+
+            <form asp-action="Pagar" asp-route-codigo="@Model.Codigo" method="post">
+                <button type="submit" id="btnPagar" class="cat-boton boton-ancho" disabled="@(!disponible)">
+                    @(ViewBag.NombrePasarela == "MercadoPago" ? "Pagar con Mercado Pago" : "Ir a pagar") · @Formato.Precio(Model.Total)
+                </button>
+            </form>
+
+            @if (!disponible)
+            {
+                <p class="aviso">Los pagos en línea no están disponibles en este momento.</p>
+            }
+            else if (ViewBag.NombrePasarela == "Simulado")
+            {
+                <p class="aviso">🧪 Modo de prueba: el pago se simula, no se realiza ningún cobro.</p>
+            }
+
+            <form asp-action="Cancelar" asp-route-codigo="@Model.Codigo" method="post" class="form-cancelar">
+                <button type="submit" class="boton-texto">Cancelar y liberar mis entradas</button>
+            </form>
+        }
+        else
+        {
+            <p class="aviso aviso-error">
+                @(Model.Estado switch
+                {
+                    EstadoOrden.Cancelada => "Cancelaste esta compra.",
+                    EstadoOrden.RequiereReembolso => "Tu pago llegó cuando ya no quedaban entradas. El organizador gestionará la devolución.",
+                    _ => "El tiempo de reserva terminó y las entradas se liberaron."
+                })
+            </p>
+            <a asp-controller="Eventos" asp-action="Detalle" asp-route-id="@Model.EventoId" asp-fragment="comprar" class="cat-boton boton-ancho">
+                Volver a elegir entradas
+            </a>
+        }
+
+        <p class="orden-ref">N.° de orden: @Model.Codigo</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/compra.js" asp-append-version="true"></script>
+}

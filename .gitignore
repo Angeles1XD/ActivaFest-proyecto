@@ -1,0 +1,87 @@
+## =========================
+## 🔧 Build results
+## =========================
+bin/
+obj/
+Debug/
+Release/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.log
+
+## =========================
+## 🧠 Visual Studio
+## =========================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## =========================
+## 📦 NuGet
+## =========================
+*.nupkg
+packages/
+.nuget/
+project.assets.json
+project.nuget.cache
+
+## =========================
+## 🔐 Secretos y configuración
+## =========================
+appsettings.Development.json
+appsettings.*.json
+secrets.json
+
+## =========================
+## 🌐 ASP.NET Core
+## =========================
+wwwroot/lib/
+node_modules/
+
+## =========================
+## 📁 Archivos del sistema
+## =========================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+## =========================
+## 🧪 Test Results
+## =========================
+TestResults/
+*.trx
+
+## =========================
+## 🧰 Rider / VS Code
+## =========================
+.idea/
+.vscode/
+*.code-workspace
+
+## =========================
+## 📊 Logs y temporales
+## =========================
+*.tmp
+*.temp
+*.bak
+*.swp
+
+## =========================
+## 🧾 Otros
+## =========================
+*.db
+*.sqlite
+*.mdf
+*.ldf
+*.db*
+
+## =========================
+## 🖼️ Imágenes subidas por usuarios
+## =========================
+**/wwwroot/uploads/

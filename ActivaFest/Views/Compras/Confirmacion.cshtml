@@ -1,0 +1,57 @@
+@model Orden
+@{
+    ViewData["Title"] = "¡Compra confirmada!";
+    var pagada = Model.Estado == EstadoOrden.Pagada;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+}
+
+<div class="pagina-categorias pagina-compra">
+    <ol class="pasos" aria-label="Pasos de la compra">
+        <li class="hecho">Entradas</li>
+        <li class="hecho">Confirmar</li>
+        <li class="hecho">Pago</li>
+        <li class="@(pagada ? "actual" : "")" aria-current="step">¡Listo!</li>
+    </ol>
+
+    @if (pagada)
+    {
+        <div class="confirmacion-encabezado">
+            <div class="check" aria-hidden="true">✓</div>
+            <h1>¡Compra confirmada!</h1>
+            <p>
+                Enviamos tus entradas a tu correo. También las tienes siempre en
+                <a asp-controller="Entradas" asp-action="Index">Mis entradas</a>.
+            </p>
+        </div>
+
+        <div class="tarjeta-compra">
+            <partial name="_ResumenOrden" model="Model" />
+        </div>
+
+        <h2 class="titulo-entradas">Tus @Model.Entradas.Count @(Model.Entradas.Count == 1 ? "entrada" : "entradas")</h2>
+        <div class="grid-entradas">
+            @foreach (var (entrada, i) in Model.Entradas.OrderBy(e => e.Id).Select((e, i) => (e, i)))
+            {
+                <partial name="_EntradaQr" model="(entrada, Model.Evento!, i + 1)" />
+            }
+        </div>
+    }
+    else
+    {
+        <div class="tarjeta-compra">
+            <h1>No pudimos emitir tus entradas</h1>
+            <p class="aviso aviso-error">
+                Tu pago llegó cuando ya no quedaban entradas disponibles. El organizador se comunicará contigo para la devolución.
+                N.° de orden: <b>@Model.Codigo</b>
+            </p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    @* HU27: "Ver mi ubicación en el plano" de cada entrada se carga al abrirlo *@
+    <script src="~/js/entradas.js" asp-append-version="true"></script>
+}

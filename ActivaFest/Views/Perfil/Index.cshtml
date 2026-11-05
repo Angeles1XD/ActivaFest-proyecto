@@ -1,0 +1,92 @@
+@model PerfilViewModel
+@{
+    ViewData["Title"] = "Mi perfil";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/perfil.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-perfil">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Mi cuenta</p>
+        <h1>Mi <span class="degradado">perfil</span></h1>
+    </header>
+
+    <section class="perfil-tarjeta">
+        <span class="perfil-avatar" aria-hidden="true">@Model.Inicial</span>
+        <div class="perfil-datos">
+            <h2>@Model.Nombre</h2>
+            <p>@Model.Correo</p>
+            <p class="perfil-roles">
+                @foreach (var rol in Model.Roles)
+                {
+                    <span>@rol</span>
+                }
+                <small>Miembro desde @Formato.Fecha(Model.MiembroDesde.ToLocalTime(), "MMMM 'de' yyyy")</small>
+            </p>
+        </div>
+        <ul class="perfil-cifras">
+            <li><strong>@Model.EntradasCompradas</strong> @(Model.EntradasCompradas == 1 ? "entrada" : "entradas")</li>
+            <li><a asp-controller="Entradas" asp-action="Index">Ver mis entradas →</a></li>
+        </ul>
+    </section>
+
+    <!-- 🎯 RECOMENDACIONES (HU17) -->
+    <section class="perfil-recomendados">
+        <div class="perfil-seccion-titulo">
+            <div>
+                <h2>✨ Eventos recomendados para ti</h2>
+                <p>
+                    Según lo que buscas, los eventos que visitas y tus compras@(Model.UsaUbicacion ? ", y qué tan cerca están de ti." : ".")
+                </p>
+            </div>
+            @if (Model.UsaUbicacion)
+            {
+                <a asp-action="Index" class="boton-contorno">Quitar ubicación</a>
+            }
+            else
+            {
+                <button type="button" class="boton-contorno" id="usarUbicacion">📍 Usar mi ubicación</button>
+            }
+        </div>
+        <p class="perfil-aviso" id="avisoUbicacion" role="status" hidden></p>
+
+        @if (Model.Recomendados.Count == 0)
+        {
+            <div class="cat-vacio">
+                <p>Por ahora no hay eventos próximos para recomendarte. 🔎</p>
+                <a asp-controller="Eventos" asp-action="Index" class="cat-boton">Explorar eventos</a>
+            </div>
+        }
+        else
+        {
+            <div class="cat-eventos-grid">
+                @foreach (var evento in Model.Recomendados)
+                {
+                    <partial name="_EventoCardModerno" model="evento" />
+                }
+            </div>
+        }
+    </section>
+
+    <!-- 🔒 PRIVACIDAD DEL HISTORIAL -->
+    <section class="perfil-privacidad">
+        <div>
+            <h3>Tu historial</h3>
+            <p>
+                Guardamos @Model.ActividadesRegistradas @(Model.ActividadesRegistradas == 1 ? "registro" : "registros") de búsquedas y eventos vistos
+                (como máximo 3 meses influyen en tus recomendaciones). Tu ubicación nunca se guarda.
+                <a asp-controller="Home" asp-action="Privacy">Más información</a>
+            </p>
+        </div>
+        <form asp-action="BorrarHistorial" method="post" onsubmit="return confirm('¿Borrar tu historial? Las recomendaciones volverán a ser generales.');">
+            <button type="submit" class="boton-contorno" @(Model.ActividadesRegistradas == 0 ? "disabled" : "")>Borrar historial</button>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/ubicacion.js" asp-append-version="true"></script>
+}

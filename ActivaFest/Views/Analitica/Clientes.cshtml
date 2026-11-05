@@ -1,0 +1,197 @@
+@model List<ActivaFest.Services.Analitica.ClienteAnalitica>
+@using ActivaFest.Services.Analitica
+@{
+    ViewData["Title"] = "Clientes";
+    var f = (FiltroClientes)ViewBag.Filtro;
+    var categorias = (List<Categoria>)ViewBag.Categorias;
+    var conConsentimiento = Model.Count(c => c.AceptaPromociones);
+
+    // Mismos filtros para la exportación
+    var ruta = new Dictionary<string, string?>
+    {
+        ["GastoMin"] = f.GastoMin?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["GastoMax"] = f.GastoMax?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["EntradasMin"] = f.EntradasMin?.ToString(),
+        ["ComprasMin"] = f.ComprasMin?.ToString(),
+        ["Desde"] = f.Desde?.ToString("yyyy-MM-dd"),
+        ["Hasta"] = f.Hasta?.ToString("yyyy-MM-dd"),
+        ["CategoriaId"] = f.CategoriaId?.ToString(),
+        ["Segmento"] = f.Segmento,
+        ["Orden"] = f.Orden
+    };
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Analítica / Clientes</p>
+            <h1>Filtro de <span class="degradado">clientes</span></h1>
+            <p class="cat-subtitulo">Combina los filtros para identificar a quiénes ofrecer una promoción. Los clientes se muestran con un código; el nombre solo aparece en su ficha, y cada consulta queda auditada.</p>
+        </div>
+        <div class="panel-acciones">
+            <a asp-action="Index" class="btn-gris enlace-boton">← Dashboard</a>
+            <a asp-action="Auditoria" class="btn-gris enlace-boton">🛡 Auditoría</a>
+        </div>
+    </header>
+
+    <!-- 🔎 Filtros combinables (HU29) -->
+    <form method="get" class="filtros filtros-reporte filtros-clientes" id="filtrosClientes">
+        <div class="filtro">
+            <label for="GastoMin">Gasto mínimo (S/)</label>
+            <input id="GastoMin" name="GastoMin" type="number" min="0" step="0.01" value="@f.GastoMin" />
+        </div>
+        <div class="filtro">
+            <label for="GastoMax">Gasto máximo (S/)</label>
+            <input id="GastoMax" name="GastoMax" type="number" min="0" step="0.01" value="@f.GastoMax" />
+        </div>
+        <div class="filtro">
+            <label for="EntradasMin">Entradas (mínimo)</label>
+            <input id="EntradasMin" name="EntradasMin" type="number" min="0" step="1" value="@f.EntradasMin" />
+        </div>
+        <div class="filtro">
+            <label for="ComprasMin">Compras (mínimo)</label>
+            <input id="ComprasMin" name="ComprasMin" type="number" min="0" step="1" value="@f.ComprasMin" />
+        </div>
+        <div class="filtro">
+            <label for="Desde">Compras desde</label>
+            <input id="Desde" name="Desde" type="date" value="@f.Desde?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="filtro">
+            <label for="Hasta">Compras hasta</label>
+            <input id="Hasta" name="Hasta" type="date" value="@f.Hasta?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="filtro">
+            <label for="CategoriaId">Categoría</label>
+            <select id="CategoriaId" name="CategoriaId">
+                <option value="">Todas</option>
+                @foreach (var c in categorias)
+                {
+                    <option value="@c.Id" selected="@(f.CategoriaId == c.Id)">@c.Icono @c.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="filtro">
+            <label for="Segmento">Segmento RFM</label>
+            <select id="Segmento" name="Segmento">
+                <option value="">Todos</option>
+                @foreach (var s in SegmentoRfm.Todos)
+                {
+                    <option value="@s" selected="@(f.Segmento == s)">@s</option>
+                }
+            </select>
+        </div>
+        <div class="filtro">
+            <label for="Orden">Ordenar por</label>
+            <select id="Orden" name="Orden">
+                <option value="gasto" selected="@(f.Orden is null or "gasto")">Gasto</option>
+                <option value="entradas" selected="@(f.Orden == "entradas")">Entradas</option>
+                <option value="compras" selected="@(f.Orden == "compras")">Compras</option>
+            </select>
+        </div>
+        <div class="filtro-acciones">
+            <button type="submit" class="btn-rosa">Filtrar</button>
+            <a asp-action="Clientes" class="btn-gris enlace-boton">Limpiar</a>
+            <a asp-action="ExportarClientes" asp-all-route-data="ruta" class="btn-gris enlace-boton">⬇ Exportar CSV</a>
+        </div>
+    </form>
+
+    <!-- Totales del grupo filtrado -->
+    <section class="fila-kpi" aria-label="Totales del grupo filtrado">
+        <div class="kpi">
+            <span class="kpi-etiqueta">Clientes</span>
+            <span class="kpi-valor" data-kpi="clientes">@Model.Count</span>
+            <span class="kpi-nota">@conConsentimiento aceptan promociones</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Gasto del grupo</span>
+            <span class="kpi-valor" data-kpi="gasto">@Formato.Monto(Model.Sum(c => c.Gasto))</span>
+            <span class="kpi-nota">@(f.Desde != null || f.Hasta != null || f.CategoriaId != null ? "en el período y la categoría" : "historial completo")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Entradas</span>
+            <span class="kpi-valor" data-kpi="entradas">@Model.Sum(c => c.Entradas)</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Compras</span>
+            <span class="kpi-valor" data-kpi="compras">@Model.Sum(c => c.Compras)</span>
+        </div>
+    </section>
+
+    <section class="tarjeta-panel">
+        @if (Model.Count == 0)
+        {
+            <p class="texto-tenue">Ningún cliente cumple estos filtros.</p>
+        }
+        else
+        {
+            <!-- Selección de clientes para una promoción (la crea HU30) -->
+            <form method="get" asp-controller="Promociones" asp-action="Nueva" id="seleccionPromocion">
+                <input type="hidden" name="criterio" value="@f.Descripcion()" />
+                <div class="barra-seleccion">
+                    <label><input type="checkbox" id="seleccionarTodos" /> Seleccionar todos los que aceptan promociones</label>
+                    <button type="submit" class="btn-rosa" id="crearPromocion" disabled>🎁 Crear promoción (<span id="contadorSeleccion">0</span>)</button>
+                </div>
+                <div class="tabla-contenedor">
+                    <table class="tabla-datos tabla-clientes">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>#</th>
+                                <th>Cliente</th>
+                                <th>Segmento</th>
+                                <th class="derecha">Gasto</th>
+                                <th class="derecha">Entradas</th>
+                                <th class="derecha">Compras</th>
+                                <th class="derecha">Última compra</th>
+                                <th title="Recencia · Frecuencia · Monto (1 a 5)">R·F·M</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < Model.Count; i++)
+                            {
+                                var c = Model[i];
+                                <tr>
+                                    <td>
+                                        @if (c.AceptaPromociones)
+                                        {
+                                            <input type="checkbox" name="clientes" value="@c.UsuarioId" class="check-cliente" aria-label="Seleccionar cliente @c.Codigo" />
+                                        }
+                                        else
+                                        {
+                                            <span class="texto-tenue" title="No aceptó recibir promociones">—</span>
+                                        }
+                                    </td>
+                                    <td class="num">@(i + 1)</td>
+                                    <td class="num">Cliente @c.Codigo</td>
+                                    <td><span class="badge-segmento segmento-@c.Segmento.Replace(" ", "-").ToLowerInvariant()">@c.Segmento</span></td>
+                                    <td class="derecha num">@Formato.Monto(c.Gasto)</td>
+                                    <td class="derecha num">@c.Entradas</td>
+                                    <td class="derecha num">@c.Compras</td>
+                                    <td class="derecha num">@c.UltimaCompra.ToString("dd/MM/yyyy")</td>
+                                    <td class="num">@c.R·@c.F·@c.M</td>
+                                    <td><a asp-action="Cliente" asp-route-id="@c.UsuarioId" class="enlace-detalle">Ver ficha →</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        }
+    </section>
+    <p class="texto-tenue nota-reporte">
+        Gasto, entradas y compras se calculan con las compras pagadas del período y la categoría elegidos; el segmento RFM, con todo el historial.
+        VIP: puntajes altos en recencia, frecuencia y monto · Frecuente: compra seguido con gasto medio ·
+        En riesgo: compraba seguido y no compra hace más de 60 días · Nuevo: una sola compra en los últimos 30 días.
+        Solo se pueden seleccionar los clientes que aceptaron recibir promociones.
+    </p>
+</div>
+
+@section Scripts {
+    <script src="~/js/clientes.js" asp-append-version="true"></script>
+}

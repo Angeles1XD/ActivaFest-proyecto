@@ -1,0 +1,114 @@
+@model CategoriasViewModel
+@{
+    ViewData["Title"] = Model.Seleccionada?.Nombre ?? "Categorías";
+    var f = Model.Filtro;
+    var r = Model.Resultado;
+}
+
+@section Styles {
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" />
+    <link rel="stylesheet" href="~/css/categorias.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias">
+    <!-- 🧭 ENCABEZADO -->
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Explorar</p>
+        <h1>Explora por <span class="degradado">categorías</span></h1>
+        <p class="cat-subtitulo">Elige lo que te mueve y encuentra tu próxima experiencia.</p>
+
+        <form method="get" asp-action="Index" class="cat-buscador" role="search">
+            @if (f.CategoriaId.HasValue)
+            {
+                <input type="hidden" name="CategoriaId" value="@f.CategoriaId" />
+            }
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" /><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            <input type="search" name="Buscar" value="@f.Buscar" maxlength="100"
+                   placeholder="Buscar por evento o lugar..." aria-label="Buscar eventos" />
+            <button type="submit">Buscar</button>
+        </form>
+    </header>
+
+    <!-- 🗂️ CATEGORÍAS -->
+    <nav class="cat-grid" aria-label="Categorías">
+        <a asp-action="Index" asp-route-Buscar="@f.Buscar"
+           class="cat-tile cat-todas @(f.CategoriaId == null ? "activa" : "")"
+           aria-current="@(f.CategoriaId == null ? "page" : null)">
+            <span class="cat-kicker">Explorar</span>
+            <span class="cat-nombre">Todas</span>
+            <span class="cat-cantidad">@CategoriasViewModel.TextoCantidad(Model.TotalEventos)</span>
+        </a>
+
+        @foreach (var item in Model.Resumen)
+        {
+            var c = item.Categoria;
+            var activa = f.CategoriaId == c.Id;
+            <a asp-action="Index" asp-route-CategoriaId="@c.Id" asp-route-Buscar="@f.Buscar"
+               class="cat-tile @(activa ? "activa" : "") @(item.Cantidad == 0 ? "vacia" : "")"
+               style="--c: @Formato.Color(c.Color)"
+               aria-current="@(activa ? "page" : null)">
+                @if (c.Imagen != null)
+                {
+                    <img src="@c.Imagen" alt="" loading="lazy" />
+                }
+                <span class="cat-kicker">Descubre</span>
+                <span class="cat-nombre">@c.Nombre</span>
+                <span class="cat-cantidad">@(item.Cantidad == 0 ? "Próximamente" : CategoriasViewModel.TextoCantidad(item.Cantidad))</span>
+            </a>
+        }
+    </nav>
+
+    <!-- 🎟️ EVENTOS -->
+    <section class="cat-eventos">
+        <div class="cat-eventos-titulo">
+            <h2>
+                @if (Model.Seleccionada != null)
+                {
+                    <span>@Model.Seleccionada.Icono @Model.Seleccionada.Nombre</span>
+                }
+                else
+                {
+                    <span>Eventos disponibles</span>
+                }
+            </h2>
+            <span class="cat-total">@CategoriasViewModel.TextoCantidad(r.Total)</span>
+        </div>
+
+        @if (f.Buscar != null)
+        {
+            <p class="cat-busqueda-activa">
+                Resultados para «@f.Buscar»
+                <a asp-action="Index" asp-route-CategoriaId="@f.CategoriaId">Quitar búsqueda ✕</a>
+            </p>
+        }
+
+        @if (r.Eventos.Count == 0)
+        {
+            <div class="cat-vacio">
+                @if (!string.IsNullOrWhiteSpace(f.Buscar))
+                {
+                    <p>No hay eventos que coincidan con «@f.Buscar»@(Model.Seleccionada != null ? $" en {Model.Seleccionada.Nombre}" : "").</p>
+                    <a asp-action="Index" asp-route-CategoriaId="@f.CategoriaId" class="cat-boton">🧹 Limpiar búsqueda</a>
+                }
+                else
+                {
+                    <p>Aún no hay eventos próximos aquí.</p>
+                    <a asp-action="Index" class="cat-boton">Ver todas las categorías</a>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="cat-eventos-grid">
+                @foreach (var evento in r.Eventos)
+                {
+                    <partial name="_EventoCardModerno" model="evento" />
+                }
+            </div>
+
+            <partial name="_Paginacion" model="Model" />
+        }
+    </section>
+</div>

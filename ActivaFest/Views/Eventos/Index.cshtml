@@ -1,0 +1,117 @@
+@model CatalogoViewModel
+@{
+    ViewData["Title"] = "Eventos";
+    var f = Model.Filtro;
+    var r = Model.Resultado;
+}
+
+<div class="pagina-categorias">
+<div class="catalogo-encabezado cat-encabezado">
+    <div>
+        <p class="cat-migas">Activa-Fest / Eventos</p>
+        <h1>Todos los <span class="degradado">eventos</span></h1>
+        <p class="cat-subtitulo">
+            @if (r.Total == 0)
+            {
+                <span>No encontramos eventos con esos criterios.</span>
+            }
+            else
+            {
+                <span>@r.Total @(r.Total == 1 ? "evento encontrado" : "eventos encontrados") · filtra por fecha, precio o categoría.</span>
+            }
+        </p>
+    </div>
+
+    @if (User.IsInRole(Roles.Organizador) || User.IsInRole(Roles.Administrador))
+    {
+        <a asp-action="Crear" class="cat-boton">+ Crear evento</a>
+    }
+</div>
+
+<!-- 🔎 FILTROS (HU05) -->
+<form method="get" asp-action="Index" class="filtros" role="search">
+    <div class="filtro filtro-buscar">
+        <label for="Buscar">Buscar</label>
+        <input id="Buscar" name="Buscar" value="@f.Buscar" type="search" maxlength="100"
+               placeholder="Nombre, lugar o categoría..." />
+    </div>
+
+    <div class="filtro">
+        <label for="CategoriaId">Categoría</label>
+        <select id="CategoriaId" name="CategoriaId">
+            <option value="">Todas</option>
+            @foreach (var c in Model.Categorias)
+            {
+                <option value="@c.Id" selected="@(f.CategoriaId == c.Id)">@c.Icono @c.Nombre</option>
+            }
+        </select>
+    </div>
+
+    <div class="filtro">
+        <label for="Desde">Desde</label>
+        <input id="Desde" name="Desde" type="date" value="@f.Desde?.ToString("yyyy-MM-dd")" />
+    </div>
+
+    <div class="filtro">
+        <label for="Hasta">Hasta</label>
+        <input id="Hasta" name="Hasta" type="date" value="@f.Hasta?.ToString("yyyy-MM-dd")" />
+    </div>
+
+    <div class="filtro filtro-precio">
+        <label for="PrecioMin">Precio (S/)</label>
+        <div class="rango">
+            <input id="PrecioMin" name="PrecioMin" type="number" min="0" step="1" placeholder="Mín"
+                   value="@f.PrecioMin?.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+            <span>–</span>
+            <input id="PrecioMax" name="PrecioMax" type="number" min="0" step="1" placeholder="Máx" aria-label="Precio máximo"
+                   value="@f.PrecioMax?.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+        </div>
+    </div>
+
+    <div class="filtro">
+        <label for="Orden">Ordenar por</label>
+        <select id="Orden" name="Orden">
+            <option value="@OrdenCatalogo.FechaAsc" selected="@(f.Orden == OrdenCatalogo.FechaAsc)">Fecha más próxima</option>
+            <option value="@OrdenCatalogo.PrecioAsc" selected="@(f.Orden == OrdenCatalogo.PrecioAsc)">Menor precio</option>
+            <option value="@OrdenCatalogo.PrecioDesc" selected="@(f.Orden == OrdenCatalogo.PrecioDesc)">Mayor precio</option>
+            <option value="@OrdenCatalogo.Recientes" selected="@(f.Orden == OrdenCatalogo.Recientes)">Publicados recientemente</option>
+        </select>
+    </div>
+
+    <label class="filtro-check">
+        <input type="checkbox" name="SoloGratis" value="true" checked="@f.SoloGratis" /> Solo gratuitos
+    </label>
+
+    <div class="filtro-acciones">
+        <button type="submit" class="btn-rosa">Aplicar</button>
+        @if (f.TieneFiltros || f.Orden != OrdenCatalogo.FechaAsc)
+        {
+            <a asp-action="Index" class="btn-gris enlace-boton">Limpiar</a>
+        }
+    </div>
+</form>
+
+<!-- 🗂️ GRILLA DE EVENTOS (HU02) -->
+@if (r.Eventos.Count == 0)
+{
+    <div class="vacio">
+        @* HU05: sin resultados se muestra un mensaje y la opción de limpiar filtros *@
+        <p>😕 No hay eventos que coincidan@(f.TieneFiltros ? " con los filtros elegidos" : "").</p>
+        @if (f.TieneFiltros)
+        {
+            <a asp-action="Index" class="btn-rosa">🧹 Limpiar filtros</a>
+        }
+    </div>
+}
+else
+{
+    <div class="cat-eventos-grid">
+        @foreach (var item in r.Eventos)
+        {
+            <partial name="_EventoCardModerno" model="item" />
+        }
+    </div>
+
+    <partial name="_Paginacion" model="Model" />
+}
+</div>

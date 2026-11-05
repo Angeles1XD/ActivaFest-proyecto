@@ -1,0 +1,93 @@
+@model List<ActivaFest.Controllers.UsuarioFila>
+@using ActivaFest.Controllers
+@{
+    ViewData["Title"] = "Usuarios";
+    var buscar = (string?)ViewBag.Buscar;
+    var miId = (string)ViewBag.MiId;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-entradas">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Administración</p>
+        <h1>Gestión de <span class="degradado">usuarios</span></h1>
+        <p class="cat-subtitulo">Activa o desactiva cuentas, cambia sus roles y asigna el personal de Control de acceso a cada evento.</p>
+
+        <form method="get" class="cat-buscador" role="search">
+            <input type="search" name="buscar" value="@buscar" placeholder="Buscar por nombre o correo..." aria-label="Buscar usuarios" />
+            <button type="submit">Buscar</button>
+        </form>
+    </header>
+
+    <div class="tabla-contenedor">
+        <table class="tabla-datos">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Estado</th>
+                    @foreach (var rol in UsuariosController.RolesGestionables)
+                    {
+                        <th class="centro">@UsuariosController.NombreRol(rol)</th>
+                    }
+                    <th class="centro">Eventos asignados</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    var soyYo = u.Id == miId;
+                    <tr class="@(u.Activo ? "" : "fila-inactiva")">
+                        <td>
+                            <strong>@u.Nombre</strong> @(soyYo ? "(tú)" : "")<br />
+                            <span class="texto-tenue">@u.Email</span>
+                        </td>
+                        <td>
+                            <form asp-action="CambiarEstado" method="post">
+                                <input type="hidden" name="usuarioId" value="@u.Id" />
+                                <input type="hidden" name="activo" value="@((!u.Activo).ToString().ToLowerInvariant())" />
+                                <input type="hidden" name="buscar" value="@buscar" />
+                                <button type="submit" class="boton-rol @(u.Activo ? "activo" : "inactivo")" disabled="@soyYo"
+                                        aria-label="@(u.Activo ? "Desactivar" : "Activar") la cuenta de @u.Email"
+                                        title="@(soyYo ? "No puedes desactivar tu propia cuenta" : u.Activo ? "Clic para desactivar" : "Clic para activar")">
+                                    @(u.Activo ? "● Activa" : "○ Desactivada")
+                                </button>
+                            </form>
+                        </td>
+                        @foreach (var rol in UsuariosController.RolesGestionables)
+                        {
+                            var tiene = u.Roles.Contains(rol);
+                            var bloqueado = soyYo && tiene && rol == Roles.Administrador;
+                            <td class="centro">
+                                <form asp-action="CambiarRol" method="post">
+                                    <input type="hidden" name="usuarioId" value="@u.Id" />
+                                    <input type="hidden" name="rol" value="@rol" />
+                                    <input type="hidden" name="asignar" value="@((!tiene).ToString().ToLowerInvariant())" />
+                                    <input type="hidden" name="buscar" value="@buscar" />
+                                    <button type="submit" class="boton-rol @(tiene ? "activo" : "")" disabled="@bloqueado"
+                                            title="@(bloqueado ? "No puedes quitarte tu propio rol de Administrador" : "")"
+                                            aria-label="@(tiene ? "Quitar" : "Dar") perfil @UsuariosController.NombreRol(rol) a @u.Email">
+                                        @(tiene ? "✓ Asignado" : "+ Asignar")
+                                    </button>
+                                </form>
+                            </td>
+                        }
+                        <td class="centro">
+                            @if (u.Roles.Contains(Roles.ControlAcceso))
+                            {
+                                <a asp-action="Asignaciones" asp-route-id="@u.Id" class="boton-rol">🚪 @u.EventosAsignados @(u.EventosAsignados == 1 ? "evento" : "eventos")</a>
+                            }
+                            else
+                            {
+                                <span class="texto-tenue">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

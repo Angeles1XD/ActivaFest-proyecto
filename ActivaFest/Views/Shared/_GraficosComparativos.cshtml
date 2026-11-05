@@ -1,0 +1,48 @@
+@* Gráficos del análisis de ventas que comparten el dashboard del administrador y el panel del organizador (analisis-dashboard.js) *@
+<div class="graficos-dashboard graficos-iguales" id="seccionComparativa">
+    <section class="tarjeta-panel">
+        <h2>Ingresos acumulados</h2>
+        <p class="texto-tenue">Cómo se fue sumando lo vendido, día a día del período</p>
+        <p class="texto-tenue" id="graficoAcumuladoVacio" hidden>No hay ingresos en este período.</p>
+        <div class="grafico-chart"><canvas id="graficoAcumulado" role="img" aria-label="Ingresos acumulados en el período"></canvas></div>
+        <details class="ver-tabla" id="tablaAcumulado"><summary>Ver tabla</summary></details>
+    </section>
+    <section class="tarjeta-panel">
+        <h2>Neto y comisión por mes</h2>
+        <p class="texto-tenue">Cada barra es el total del mes: lo que queda al organizador y la comisión</p>
+        <p class="texto-tenue" id="graficoNetoComisionVacio" hidden>No hay ingresos en estos meses.</p>
+        <div class="grafico-chart"><canvas id="graficoNetoComision" role="img" aria-label="Neto y comisión por mes"></canvas></div>
+    </section>
+    <section class="tarjeta-panel">
+        <h2>Compras por hora del día</h2>
+        <p class="texto-tenue">A qué hora se paga: útil para programar lanzamientos y promociones</p>
+        <p class="texto-tenue" id="graficoHorasVacio" hidden>No hay compras en este período.</p>
+        <div class="grafico-chart"><canvas id="graficoHoras" role="img" aria-label="Compras por hora del día"></canvas></div>
+        <details class="ver-tabla" id="tablaHoras"><summary>Ver tabla</summary></details>
+    </section>
+    <section class="tarjeta-panel">
+        <h2>Ritmo de la semana</h2>
+        <p class="texto-tenue">Ingresos de cada día de la semana en el período</p>
+        <p class="texto-tenue" id="radarDiasVacio" hidden>No hay compras en este período.</p>
+        <div class="grafico-chart"><canvas id="radarDias" role="img" aria-label="Ingresos por día de la semana"></canvas></div>
+    </section>
+    <section class="tarjeta-panel">
+        <h2>Ingresos por zona</h2>
+        <p class="texto-tenue">Soles por tipo de entrada: cuanto más largo el sector, más ingresos</p>
+        <p class="texto-tenue" id="polarZonasVacio" hidden>No hay entradas vendidas en este período.</p>
+        <div class="grafico-chart"><canvas id="polarZonas" role="img" aria-label="Ingresos por zona"></canvas></div>
+    </section>
+    <section class="tarjeta-panel">
+        <h2>Precio y ocupación de los eventos</h2>
+        <p class="texto-tenue">Cada burbuja es un evento: precio promedio, ocupación y, por su tamaño, sus ingresos</p>
+        <p class="texto-tenue" id="burbujasEventosVacio" hidden>No hay eventos con ventas en este período.</p>
+        <div class="grafico-chart"><canvas id="burbujasEventos" role="img" aria-label="Precio promedio y ocupación de cada evento"></canvas></div>
+        <details class="ver-tabla" id="tablaBurbujas"><summary>Ver tabla</summary></details>
+    </section>
+    <section class="tarjeta-panel">
+        <h2>De la visita a la compra</h2>
+        <p class="texto-tenue">Visitas a las fichas, órdenes creadas en el período y compras pagadas</p>
+        <p class="texto-tenue" id="graficoEmbudoVacio" hidden>No hay actividad en este período.</p>
+        <div class="grafico-chart"><canvas id="graficoEmbudo" role="img" aria-label="Visitas, órdenes y compras"></canvas></div>
+    </section>
+</div>

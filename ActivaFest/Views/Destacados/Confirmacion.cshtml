@@ -1,0 +1,34 @@
+@model ContratoDestacado
+@{
+    ViewData["Title"] = "Evento destacado";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+}
+
+<div class="pagina-categorias pagina-compra">
+    <div class="confirmacion-encabezado">
+        <div class="check" aria-hidden="true">⭐</div>
+        <h1>¡Tu evento ya está destacado!</h1>
+        <p>Te enviamos el comprobante por correo.</p>
+    </div>
+
+    <div class="tarjeta-compra">
+        <table class="resumen-items">
+            <tbody>
+                <tr><td>Evento</td><td class="monto">@Model.Evento?.Titulo</td></tr>
+                <tr><td>Paquete</td><td class="monto">@Model.Paquete?.Nombre · @Model.Dias días</td></tr>
+                <tr><td>En Destacados desde</td><td class="monto">@Model.FechaInicio?.ToString("dd/MM/yyyy HH:mm")</td></tr>
+                <tr><td>Hasta</td><td class="monto">@Model.FechaFin?.ToString("dd/MM/yyyy HH:mm")</td></tr>
+                <tr><td>Tiempo restante</td><td class="monto"><span class="temporizador-destacado" data-segundos="@Math.Max(0, (int)((Model.FechaFin ?? DateTime.Now) - DateTime.Now).TotalSeconds)">…</span></td></tr>
+            </tbody>
+            <tfoot>
+                <tr><td>Total pagado</td><td class="monto">@Formato.Monto(Model.Precio)</td></tr>
+            </tfoot>
+        </table>
+
+        <a asp-controller="Home" asp-action="Index" class="cat-boton boton-ancho">Verlo en la portada</a>
+        <p class="orden-ref">N.° de operación: @Model.Codigo</p>
+    </div>
+</div>

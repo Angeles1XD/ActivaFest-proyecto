@@ -1,0 +1,29 @@
+@model ContratoDestacado
+@{
+    ViewData["Title"] = "Pasarela de prueba";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+}
+
+<div class="pagina-categorias pagina-compra">
+    <div class="tarjeta-compra pasarela-simulada">
+        <p class="sello-prueba">🧪 PASARELA DE PRUEBA</p>
+        <h1>Pago simulado</h1>
+        <p class="texto-pasarela">Paquete <b>@Model.Paquete?.Nombre</b> (@Model.Dias días) para <b>@Model.Evento?.Titulo</b>. No se pide ni se guarda ningún dato de tarjeta.</p>
+
+        <div class="monto-grande">@Formato.Monto(Model.Precio)</div>
+
+        <div class="acciones-pasarela">
+            <form asp-action="PasarelaSimulada" asp-route-codigo="@Model.Codigo" method="post">
+                <input type="hidden" name="aprobar" value="true" />
+                <button type="submit" class="cat-boton boton-ancho">✅ Aprobar pago</button>
+            </form>
+            <form asp-action="PasarelaSimulada" asp-route-codigo="@Model.Codigo" method="post">
+                <input type="hidden" name="aprobar" value="false" />
+                <button type="submit" class="boton-secundario boton-ancho">❌ Simular pago rechazado</button>
+            </form>
+        </div>
+    </div>
+</div>

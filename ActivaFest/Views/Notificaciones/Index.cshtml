@@ -1,0 +1,68 @@
+@model ActivaFest.Services.Notificaciones.PanelNotificaciones
+@{
+    ViewData["Title"] = "Notificaciones";
+}
+
+<div class="pagina-categorias pagina-notificaciones">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Mi cuenta</p>
+        <h1>Mis <span class="degradado">notificaciones</span></h1>
+        <p class="cat-subtitulo">Aquí llegan los recordatorios y avisos que le pides al asistente virtual 💬. Prueba con "recuérdame" y el nombre de un evento.</p>
+    </header>
+
+    @if (Model.Programadas.Count > 0)
+    {
+        <section class="notif-seccion">
+            <h2>Programadas</h2>
+            <ul class="notif-lista">
+                @foreach (var p in Model.Programadas)
+                {
+                    <li class="notif-item notif-programada">
+                        <span class="notif-icono" aria-hidden="true">@p.Icono</span>
+                        <div class="notif-cuerpo">
+                            <strong>@p.Texto</strong>
+                            <span class="notif-fecha">@(p.Cuando != null ? $"Se enviará el {p.Cuando:dd/MM 'a las' HH:mm}" : "Activo hasta que ocurra")</span>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    <section class="notif-seccion">
+        <h2>Recibidas</h2>
+        @if (Model.Notificaciones.Count == 0)
+        {
+            <div class="cat-vacio">
+                <span class="entradas-vacio-icono" aria-hidden="true">🔔</span>
+                <p>Todavía no tienes notificaciones. Pídele al asistente que te recuerde un evento.</p>
+            </div>
+        }
+        else
+        {
+            <ul class="notif-lista">
+                @foreach (var n in Model.Notificaciones)
+                {
+                    <li class="notif-item @(n.Leida ? "" : "notif-nueva")">
+                        <span class="notif-icono" aria-hidden="true">@n.Icono</span>
+                        <div class="notif-cuerpo">
+                            @if (n.Url != null)
+                            {
+                                <a href="@n.Url"><strong>@n.Titulo</strong></a>
+                            }
+                            else
+                            {
+                                <strong>@n.Titulo</strong>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(n.Mensaje))
+                            {
+                                <span>@n.Mensaje</span>
+                            }
+                            <span class="notif-fecha">@n.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>

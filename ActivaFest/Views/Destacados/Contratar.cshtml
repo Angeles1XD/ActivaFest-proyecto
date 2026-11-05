@@ -1,0 +1,116 @@
+@model ActivaFest.Controllers.ContratarDestacadoViewModel
+@{
+    ViewData["Title"] = "Destacar evento";
+    var ev = Model.Evento;
+    var puedeContratar = ev.Estado == EstadoEvento.Aprobado && Model.DiasDisponibles >= 1 && Model.PasarelaDisponible;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel">
+    <a asp-controller="Eventos" asp-action="MisEventos" class="enlace-volver-claro">← Mis eventos</a>
+
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Publicidad</p>
+        <h1>Destaca tu <span class="degradado">evento</span></h1>
+        <p class="cat-subtitulo">
+            Tu evento aparecerá en la sección <b>⭐ Destacados</b> de la portada y con la etiqueta "Destacado" en el catálogo
+            durante los días del paquete. El cobro es inmediato y la vigencia empieza al confirmarse el pago.
+        </p>
+    </header>
+
+    <!-- Evento y estado actual -->
+    <section class="tarjeta-panel evento-a-destacar">
+        @if (ev.Imagenes.FirstOrDefault() is { } portada)
+        {
+            <img src="@portada.Ruta" alt="" />
+        }
+        <div>
+            <h2>@ev.Titulo</h2>
+            <p class="texto-tenue">@Formato.Fecha(ev.Fecha, "dddd dd 'de' MMMM, HH:mm") · faltan @Model.DiasDisponibles @(Model.DiasDisponibles == 1 ? "día" : "días")</p>
+            @if (Model.Vigente != null)
+            {
+                <p class="estado-conciliacion ok"><span aria-hidden="true">✓</span> Destacado hasta el @Model.Vigente.FechaFin?.ToString("dd/MM/yyyy HH:mm")
+                    · <span class="temporizador-destacado" data-segundos="@Math.Max(0, (int)(Model.Vigente.FechaFin!.Value - DateTime.Now).TotalSeconds)">⏱️ quedan …</span>.
+                    Si contratas otro paquete, se suma a continuación.</p>
+            }
+            else if (ev.Estado != EstadoEvento.Aprobado)
+            {
+                <p class="estado-conciliacion alerta"><span aria-hidden="true">!</span> El evento debe estar aprobado para destacarlo.</p>
+            }
+            else if (Model.DiasDisponibles < 1)
+            {
+                <p class="estado-conciliacion alerta"><span aria-hidden="true">!</span> El evento ocurre en menos de un día: ya no se puede destacar.</p>
+            }
+        </div>
+    </section>
+
+    <!-- Paquetes -->
+    <div class="grid-paquetes">
+        @foreach (var p in Model.Paquetes)
+        {
+            var alcanza = p.Dias <= Model.DiasDisponibles;
+            <article class="paquete @(p.Prioridad >= 3 ? "paquete-top" : "") @(alcanza ? "" : "no-disponible")">
+                @if (p.Prioridad >= 3)
+                {
+                    <span class="paquete-cinta">Más visibilidad</span>
+                }
+                <h3>@p.Nombre</h3>
+                <p class="paquete-precio">@Formato.Monto(p.Precio)</p>
+                <p class="paquete-dias">@p.Dias días en Destacados</p>
+                <p class="paquete-descripcion">@p.Descripcion</p>
+                <ul class="paquete-lista">
+                    <li>✓ Sección Destacados de la portada</li>
+                    <li>✓ Etiqueta "Destacado" en el catálogo</li>
+                    <li>✓ Prioridad de orden: nivel @p.Prioridad</li>
+                </ul>
+
+                @if (!alcanza)
+                {
+                    <p class="texto-tenue centro">Tu evento ocurre antes de que termine este paquete.</p>
+                }
+                <form asp-action="Contratar" asp-route-id="@ev.Id" method="post">
+                    <input type="hidden" name="paqueteId" value="@p.Id" />
+                    <button type="submit" class="cat-boton boton-ancho" disabled="@(!puedeContratar || !alcanza)">Contratar @p.Nombre</button>
+                </form>
+            </article>
+        }
+    </div>
+
+    @if (!Model.PasarelaDisponible)
+    {
+        <p class="aviso aviso-error">Los pagos en línea no están disponibles en este momento.</p>
+    }
+
+    <!-- Historial -->
+    @if (Model.Historial.Count > 0)
+    {
+        <section class="tarjeta-panel">
+            <h2>Historial de destacados</h2>
+            <div class="tabla-contenedor">
+                <table class="tabla-datos">
+                    <thead><tr><th>Paquete</th><th>Vigencia</th><th class="derecha">Monto</th><th>Estado</th></tr></thead>
+                    <tbody>
+                        @foreach (var c in Model.Historial)
+                        {
+                            var vigente = c.VigenteEn(DateTime.Now);
+                            <tr>
+                                <td>@c.Paquete?.Nombre (@c.Dias días)</td>
+                                <td class="num">@(c.FechaInicio.HasValue ? $"{c.FechaInicio:dd/MM HH:mm} → {c.FechaFin:dd/MM HH:mm}" : "—")</td>
+                                <td class="derecha num">@Formato.Monto(c.Precio)</td>
+                                <td>
+                                    <span class="chip-estado @(vigente ? "chip-Aprobado" : c.Estado == EstadoContrato.PendientePago ? "chip-Pendiente" : "")">
+                                        @(vigente ? "Vigente" : c.Estado == EstadoContrato.PendientePago ? "Pago pendiente" : c.FechaInicio > DateTime.Now ? "Programado" : "Finalizado")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</div>

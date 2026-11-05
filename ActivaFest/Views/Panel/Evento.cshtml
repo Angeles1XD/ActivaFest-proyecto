@@ -1,0 +1,226 @@
+@model ActivaFest.Services.Panel.PanelEvento
+@using System.Globalization
+@using System.Text.Json
+@{
+    var ev = Model.Evento;
+    ViewData["Title"] = $"Panel · {ev.Titulo}";
+    var inv = CultureInfo.InvariantCulture;
+    string Pct(double v) => Math.Round(v * 100, 1).ToString(inv);
+
+    var dias = Model.VentasPorDia;
+    var diaMaximo = dias.Where(d => d.Entradas > 0).OrderByDescending(d => d.Entradas).ThenByDescending(d => d.Dia).FirstOrDefault();
+
+    // HU13: datos de los gráficos de Chart.js (los mismos de las tablas, que siguen disponibles)
+    var datosGraficos = JsonSerializer.Serialize(new
+    {
+        dias = dias.Select(d => new { etiqueta = d.Dia.ToString("dd/MM"), entradas = d.Entradas, ingresos = d.Ingresos }),
+        zonas = Model.Zonas.Select(z => new { nombre = z.Nombre, vendidas = z.Vendidas, reservadas = z.Reservadas, disponibles = z.Disponibles })
+    });
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <a asp-action="Index" class="enlace-volver-claro">← Todos mis eventos</a>
+
+    <header class="panel-cabecera">
+        <div>
+            <h1>@ev.Titulo</h1>
+            <p class="texto-tenue">
+                @Formato.Fecha(ev.Fecha, "dddd dd 'de' MMMM 'de' yyyy, HH:mm") · @ev.Ubicacion
+                · <span class="chip-estado chip-@ev.Estado">@ev.Estado</span>
+                @if (ev.YaOcurrio(DateTime.Now)) { <span class="chip-estado chip-Finalizado">Finalizado</span> }
+            </p>
+        </div>
+        <div class="panel-acciones">
+            <a asp-controller="Eventos" asp-action="Detalle" asp-route-id="@ev.Id" class="boton-secundario boton-chico">Ver ficha</a>
+            @if (!ev.YaOcurrio(DateTime.Now))
+            {
+                <a asp-controller="Eventos" asp-action="Editar" asp-route-id="@ev.Id" class="boton-secundario boton-chico">Editar</a>
+            }
+            @if (ev.Estado == EstadoEvento.Aprobado && DateTime.Now <= ev.FinValidezEntradas)
+            {
+                @* HU08: el escáner es solo del personal de Control de Acceso *@
+                @if (User.IsInRole(Roles.ControlAcceso))
+                {
+                    <a asp-controller="Acceso" asp-action="Escanear" asp-route-id="@ev.Id" class="cat-boton boton-chico">Escanear entradas</a>
+                }
+                <a asp-controller="Destacados" asp-action="Contratar" asp-route-id="@ev.Id" class="boton-secundario boton-chico">⭐ Destacar</a>
+            }
+        </div>
+    </header>
+
+    @if (ev.EsGratuito)
+    {
+        @* HU34: evento de entrada libre: su alcance se mide con visitas y «Me interesa», no con ventas *@
+        <partial name="_PanelGratuito" model="ev" />
+    }
+    else
+    {
+    <!-- ===== Indicadores (stat tiles) ===== -->
+    <section class="fila-kpi" aria-label="Indicadores del evento">
+        <div class="kpi kpi-hero">
+            <span class="kpi-etiqueta">Ingresos</span>
+            <span class="kpi-valor">@Formato.Monto(Model.Ingresos)</span>
+            <span class="kpi-nota">@Model.OrdenesPagadas @(Model.OrdenesPagadas == 1 ? "compra confirmada" : "compras confirmadas")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Entradas vendidas</span>
+            <span class="kpi-valor">@Model.Vendidas.ToString("N0")</span>
+            <span class="kpi-nota">de @Model.Aforo.ToString("N0") de aforo</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Aforo restante</span>
+            <span class="kpi-valor">@Model.Disponibles.ToString("N0")</span>
+            <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.Round(Model.Ocupacion * 100)" aria-label="Ocupación">
+                <span style="width: @Pct(Model.Ocupacion)%"></span>
+            </div>
+            <span class="kpi-nota">@Model.Ocupacion.ToString("P0") ocupado@(Model.Reservadas > 0 ? $" · {Model.Reservadas} en reserva" : "")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Ingresaron</span>
+            <span class="kpi-valor">@Model.Ingresados.ToString("N0")</span>
+            <span class="kpi-nota">de @Model.Vendidas.ToString("N0") entradas</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Visitas a la ficha</span>
+            <span class="kpi-valor">@Model.Visitas.ToString("N0")</span>
+            <span class="kpi-nota">@Model.Conversion.ToString("P1") terminaron en compra</span>
+        </div>
+    </section>
+
+    <!-- OE4: estado (icono + texto, nunca solo color) -->
+    @if (Model.Conciliado)
+    {
+        <p class="estado-conciliacion ok"><span aria-hidden="true">✓</span> Cifras conciliadas con las transacciones registradas.</p>
+    }
+    else
+    {
+        <p class="estado-conciliacion alerta"><span aria-hidden="true">⚠</span> Hay diferencias entre el aforo y las entradas emitidas. Revisa las órdenes de este evento.</p>
+    }
+
+    <!-- ===== Gráfico: entradas vendidas por día (una serie → sin leyenda, el título la nombra) ===== -->
+    <section class="tarjeta-panel">
+        <h2>Entradas vendidas por día</h2>
+        <p class="texto-tenue">Últimos @dias.Count días · hora de Perú</p>
+
+        <!-- HU13: gráfico con Chart.js -->
+        <div class="grafico-chart">
+            <canvas id="graficoVentas" role="img" aria-label="Entradas vendidas por día. Máximo: @(diaMaximo == null ? "sin ventas" : $"{diaMaximo.Entradas} el {diaMaximo.Dia:dd/MM}")"></canvas>
+        </div>
+
+        <details class="vista-tabla">
+            <summary>Ver como tabla</summary>
+            <table class="tabla-datos">
+                <thead><tr><th>Día</th><th class="derecha">Entradas</th><th class="derecha">Ingresos</th></tr></thead>
+                <tbody>
+                    @foreach (var d in dias.Where(d => d.Entradas > 0 || d.Ingresos > 0))
+                    {
+                        <tr><td>@Formato.Fecha(d.Dia, "dddd dd MMM")</td><td class="derecha num">@d.Entradas</td><td class="derecha num">@Formato.Monto(d.Ingresos)</td></tr>
+                    }
+                </tbody>
+            </table>
+        </details>
+    </section>
+
+    <!-- ===== Estado de cuenta del organizador (HU16 / OE5) ===== -->
+    <section class="tarjeta-panel">
+        <h2>Tu liquidación</h2>
+        <p class="texto-tenue">La comisión de la plataforma se fija en cada venta al confirmarse el pago.</p>
+        <div class="tabla-contenedor">
+            <table class="tabla-datos tabla-cuenta">
+                <tbody>
+                    <tr><td>Ventas brutas</td><td class="derecha num">@Formato.Monto(Model.Ingresos)</td></tr>
+                    <tr><td>Comisión ActivaFest</td><td class="derecha num">− @Formato.Monto(Model.Comision)</td></tr>
+                    <tr><td><strong>Neto para ti</strong></td><td class="derecha num"><strong>@Formato.Monto(Model.Neto)</strong></td></tr>
+                    <tr><td>Ya pagado</td><td class="derecha num">− @Formato.Monto(Model.Liquidado)</td></tr>
+                    <tr class="fila-total"><td><strong>Saldo por cobrar</strong></td><td class="derecha num"><strong>@Formato.Monto(Model.SaldoPorCobrar)</strong></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===== Ocupación por zona (medidores) ===== -->
+    <section class="tarjeta-panel">
+        <h2>Por zona</h2>
+        <div class="grafico-chart grafico-zonas">
+            <canvas id="graficoZonas" role="img" aria-label="Entradas vendidas, en reserva y disponibles por zona"></canvas>
+        </div>
+        <div class="tabla-contenedor">
+            <table class="tabla-datos">
+                <thead>
+                    <tr>
+                        <th>Zona</th>
+                        <th class="derecha">Precio</th>
+                        <th class="derecha">Vendidas</th>
+                        <th class="col-meter">Ocupación</th>
+                        <th class="derecha">Disponibles</th>
+                        <th class="derecha">Ingresos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var z in Model.Zonas)
+                    {
+                        <tr>
+                            <td><strong>@z.Nombre</strong></td>
+                            <td class="derecha num">@Formato.Precio(z.Precio)</td>
+                            <td class="derecha num">@z.Vendidas / @z.Capacidad</td>
+                            <td class="col-meter">
+                                <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.Round(z.Ocupacion * 100)" aria-label="Ocupación de @z.Nombre">
+                                    <span style="width: @Pct(z.Ocupacion)%"></span>
+                                </div>
+                            </td>
+                            <td class="derecha num">@z.Disponibles@(z.Reservadas > 0 ? $" (+{z.Reservadas} en reserva)" : "")</td>
+                            <td class="derecha num">@Formato.Monto(z.Ingresos)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===== Últimas compras ===== -->
+    <section class="tarjeta-panel">
+        <h2>Últimas compras</h2>
+        @if (Model.UltimasOrdenes.Count == 0)
+        {
+            <p class="texto-tenue">Todavía no hay compras confirmadas.</p>
+        }
+        else
+        {
+            <div class="tabla-contenedor">
+                <table class="tabla-datos">
+                    <thead>
+                        <tr><th>Fecha</th><th>Comprador</th><th class="derecha">Entradas</th><th class="derecha">Total</th><th>Medio</th><th>N.° de orden</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in Model.UltimasOrdenes)
+                        {
+                            <tr>
+                                <td class="num">@o.Fecha.ToString("dd/MM HH:mm")</td>
+                                <td>@o.Comprador</td>
+                                <td class="derecha num">@o.Entradas</td>
+                                <td class="derecha num">@Formato.Monto(o.Total)</td>
+                                <td>@o.Proveedor</td>
+                                <td class="texto-tenue num">@o.Codigo</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+    }
+</div>
+
+@section Scripts {
+    @if (!ev.EsGratuito)
+    {
+    <script type="application/json" id="datosPanel">@Html.Raw(datosGraficos)</script>
+    <partial name="_ChartJs" />
+    <script src="~/js/panel.js" asp-append-version="true"></script>
+    }
+}

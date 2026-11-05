@@ -1,0 +1,34 @@
+@model CatalogoViewModel
+@{
+    var actual = Model.Resultado.Pagina;
+    var total = Model.Resultado.TotalPaginas;
+    var inicio = Math.Max(1, actual - 2);
+    var fin = Math.Min(total, actual + 2);
+}
+
+@if (total > 1)
+{
+    <nav class="paginacion" aria-label="Paginación del catálogo">
+        @if (actual > 1)
+        {
+            <a asp-action="Index" asp-all-route-data="Model.Filtro.RutaConPagina(actual - 1)" aria-label="Página anterior">‹</a>
+        }
+
+        @for (var p = inicio; p <= fin; p++)
+        {
+            if (p == actual)
+            {
+                <span class="actual" aria-current="page">@p</span>
+            }
+            else
+            {
+                <a asp-action="Index" asp-all-route-data="Model.Filtro.RutaConPagina(p)">@p</a>
+            }
+        }
+
+        @if (actual < total)
+        {
+            <a asp-action="Index" asp-all-route-data="Model.Filtro.RutaConPagina(actual + 1)" aria-label="Página siguiente">›</a>
+        }
+    </nav>
+}

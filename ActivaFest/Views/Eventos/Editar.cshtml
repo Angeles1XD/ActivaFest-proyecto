@@ -1,0 +1,27 @@
+@model EventoFormViewModel
+@{
+    ViewData["Title"] = "Editar evento";
+}
+
+@section Styles {
+    <partial name="_LeafletCss" />
+    <link rel="stylesheet" href="~/css/plano.css" asp-append-version="true" />
+}
+
+<a asp-action="MisEventos" class="enlace-volver">← Mis eventos</a>
+<header class="cat-encabezado">
+    <p class="cat-migas">Activa-Fest / Organizador</p>
+    <h1>Editar <span class="degradado">evento</span></h1>
+    <p class="cat-subtitulo">
+        Si el evento ya está publicado, los cambios se aplican de inmediato y avisamos por correo a quienes compraron
+        si cambian la fecha o el lugar. Si está pendiente o fue rechazado, vuelve a revisión.
+    </p>
+</header>
+
+<partial name="_FormularioEvento" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_LeafletJs" />
+    <script src="~/js/crear-evento.js" asp-append-version="true"></script>
+}

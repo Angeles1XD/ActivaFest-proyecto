@@ -1,0 +1,27 @@
+@model OlvideContrasenaViewModel
+@{
+    ViewData["Title"] = "Recuperar contraseña";
+}
+
+<div class="auth-card">
+    <h2 class="text-gradient">Recuperar contraseña</h2>
+    <p class="texto-suave">Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.</p>
+
+    <form asp-action="OlvideContrasena" method="post">
+        <div class="campo">
+            <label asp-for="Email"></label>
+            <input asp-for="Email" autocomplete="email" />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn-rosa">Enviar enlace</button>
+    </form>
+
+    <div class="auth-links">
+        <p><a asp-action="Login">← Volver a iniciar sesión</a></p>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

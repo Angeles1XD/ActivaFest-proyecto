@@ -1,0 +1,100 @@
+@{
+    ViewData["Title"] = "Personal de control";
+    var eventos = (List<Evento>)ViewBag.Eventos;
+    var mias = (List<SolicitudPersonal>)ViewBag.Mias;
+    var habilitados = (Dictionary<(int SolicitudId, string Correo), bool>)ViewBag.Habilitados;
+    var eventoId = ViewBag.EventoId as int?;
+    string Estado(EstadoSolicitud e) => e switch { EstadoSolicitud.Pendiente => "⏳ En revisión", EstadoSolicitud.Aprobada => "✅ Aprobada", _ => "❌ Rechazada" };
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-solicitud">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Organizador / Personal de control</p>
+        <h1>Personal de <span class="degradado">control</span></h1>
+        <p class="cat-subtitulo">Pide al administrador que habilite el control de acceso a las cuentas de tus trabajadores. Cuando lo apruebe, esas cuentas solo podrán escanear los QR de ese evento.</p>
+    </header>
+
+    <div class="solicitud-columnas">
+        <section class="tarjeta-panel" aria-labelledby="tituloPedir">
+            <h2 id="tituloPedir">Solicitar personal</h2>
+            @if (eventos.Count == 0)
+            {
+                <p class="texto-suave">Aún no tienes eventos aprobados próximos. Cuando el administrador apruebe tu evento podrás pedir su personal.</p>
+            }
+            else
+            {
+                <form asp-action="Solicitar" method="post" class="form-solicitud">
+                    <div class="campo">
+                        <label for="eventoId">Evento</label>
+                        <select id="eventoId" name="eventoId" required>
+                            @foreach (var e in eventos)
+                            {
+                                <option value="@e.Id" selected="@(e.Id == eventoId)">@e.Titulo — @e.Fecha.ToString("dd/MM/yyyy HH:mm")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="campo">
+                        <label for="correos">Correos de las personas que controlarán la puerta</label>
+                        <textarea id="correos" name="correos" rows="4" required placeholder="juan@gmail.com, maria@gmail.com">@TempData["Correos"]</textarea>
+                        <small class="texto-suave">
+                            Pídele a cada trabajador el correo con el que se registró en ActivaFest y escríbelos separados por coma (hasta @ActivaFest.Services.Organizadores.SolicitudPersonalService.MaxCuentas).
+                            El administrador revisará esas cuentas y les habilitará el control de acceso. Si no responde, la solicitud se aprueba sola 1 hora antes del evento. El permiso termina cuando acaba el evento.
+                        </small>
+                    </div>
+                    <div class="campo">
+                        <label for="mensaje">Mensaje para el administrador (opcional)</label>
+                        <textarea id="mensaje" name="mensaje" rows="2" maxlength="500" placeholder="Ej.: son las 3 personas de mi equipo que estarán en la Puerta 1.">@TempData["MensajePersonal"]</textarea>
+                    </div>
+                    <button type="submit" class="btn-rosa">Enviar solicitud</button>
+                </form>
+            }
+            <p class="texto-suave">¿Prefieres hablar con el equipo? Escríbenos desde <a asp-controller="Contacto" asp-action="Index">Contacto</a>.</p>
+        </section>
+
+        <section class="tarjeta-panel" aria-labelledby="tituloMias">
+            <h2 id="tituloMias">Mis solicitudes</h2>
+            <p class="texto-suave">Aquí ves si cada correo ya quedó habilitado, para confirmarlo con tus trabajadores.</p>
+            @if (mias.Count == 0)
+            {
+                <p class="texto-suave">Todavía no enviaste solicitudes.</p>
+            }
+            else
+            {
+                <ul class="lista-solicitudes" id="misSolicitudes">
+                    @foreach (var s in mias)
+                    {
+                        <li>
+                            <strong>@s.Evento?.Titulo</strong> · <span>@Estado(s.Estado)</span>@(s.RespuestaAutomatica ? " · 🤖 automática" : "")
+                            @if (s.Estado == EstadoSolicitud.Pendiente && s.Evento != null)
+                            {
+                                <div class="texto-tenue" data-dato="limite-automatico">Si el administrador no responde antes, se aprueba sola el @ActivaFest.Services.Organizadores.SolicitudPersonalService.LimiteRespuesta(s.Evento).ToString("dd/MM HH:mm") (1 hora antes del evento).</div>
+                            }
+                            <ul class="estado-personal">
+                                @foreach (var correo in s.ListaCorreos)
+                                {
+                                    var asignado = habilitados.TryGetValue((s.Id, correo), out var activa);
+                                    var listo = asignado && activa;
+                                    <li data-correo="@correo">
+                                        <span>@correo</span>
+                                        <span class="@(listo ? "chip-asignado" : asignado || s.Estado == EstadoSolicitud.Pendiente ? "texto-tenue" : "chip-alerta")">
+                                            @(listo ? "✅ Habilitado" : asignado ? "🏁 Turno terminado" : s.Estado == EstadoSolicitud.Pendiente ? "⏳ Pendiente" : s.Estado == EstadoSolicitud.Rechazada ? "No habilitado" : "No habilitado: consulta con el administrador")
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+                            @if (s.Estado == EstadoSolicitud.Rechazada)
+                            {
+                                <span class="texto-tenue">Motivo: @s.MotivoRechazo</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+</div>

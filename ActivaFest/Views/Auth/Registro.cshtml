@@ -1,0 +1,61 @@
+@model RegistroViewModel
+@{
+    ViewData["Title"] = "Crear cuenta";
+}
+
+<div class="auth-card">
+    <h2 class="text-gradient">Crear cuenta</h2>
+
+    <form asp-action="Registro" method="post">
+        <div asp-validation-summary="ModelOnly" class="validacion"></div>
+
+        <div class="campo">
+            <label asp-for="NombreCompleto"></label>
+            <input asp-for="NombreCompleto" autocomplete="name" />
+            <span asp-validation-for="NombreCompleto" class="text-danger"></span>
+        </div>
+
+        <div class="campo">
+            <label asp-for="Email"></label>
+            <input asp-for="Email" autocomplete="email" placeholder="tucorreo@ejemplo.com" />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+
+
+        <div class="campo">
+            <label asp-for="Password"></label>
+            <input asp-for="Password" autocomplete="new-password" />
+            <span class="texto-suave">Mínimo 8 caracteres, una mayúscula y un número.</span><br />
+            <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+
+        <div class="campo">
+            <label asp-for="ConfirmarPassword"></label>
+            <input asp-for="ConfirmarPassword" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmarPassword" class="text-danger"></span>
+        </div>
+
+        <!-- Consentimientos separados (Ley N.° 29733, RNF07) -->
+        <label class="campo-check">
+            <input asp-for="AceptaTratamientoDatos" required />
+            <span>Acepto el tratamiento de mis datos personales según la <a asp-controller="Home" asp-action="Privacy" target="_blank">política de privacidad</a>.</span>
+        </label>
+        <span asp-validation-for="AceptaTratamientoDatos" class="text-danger"></span>
+
+        <label class="campo-check">
+            <input asp-for="AceptaPromociones" />
+            <span>Quiero recibir promociones y descuentos por correo (opcional).</span>
+        </label>
+
+        <button type="submit" class="btn-rosa">Registrarme</button>
+    </form>
+
+    <div class="auth-links">
+        <p>¿Ya tienes cuenta? <a asp-action="Login">Inicia sesión</a></p>
+        <p class="texto-suave">¿Quieres publicar eventos? Crea tu cuenta y luego <a asp-controller="Organizador" asp-action="Solicitar">solicita que la habiliten como organizador</a>.</p>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

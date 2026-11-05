@@ -1,0 +1,113 @@
+@model ActivaFest.Services.Analitica.FichaCliente
+@{
+    var r = Model.Resumen;
+    ViewData["Title"] = $"Cliente {r.Codigo}";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Analítica / Clientes / @r.Codigo</p>
+            <h1>@Model.Nombre <span class="badge-segmento segmento-@r.Segmento.Replace(" ", "-").ToLowerInvariant()">@r.Segmento</span></h1>
+            <p class="cat-subtitulo">@Model.Correo · cliente @r.Codigo · miembro desde @Model.MiembroDesde.ToString("dd/MM/yyyy")</p>
+        </div>
+        <a asp-action="Clientes" class="btn-gris enlace-boton">← Ranking</a>
+    </header>
+
+    <p class="aviso-auditoria">🛡 Este acceso quedó registrado en la auditoría de analítica (Ley N.° 29733).</p>
+
+    <section class="fila-kpi" aria-label="Resumen del cliente">
+        <div class="kpi kpi-hero">
+            <span class="kpi-etiqueta">Gasto total</span>
+            <span class="kpi-valor" data-kpi="gasto">@Formato.Monto(r.Gasto)</span>
+            <span class="kpi-nota">@r.Compras @(r.Compras == 1 ? "compra" : "compras") · promedio @Formato.Monto(r.GastoPromedio)</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Entradas compradas</span>
+            <span class="kpi-valor" data-kpi="entradas">@r.Entradas</span>
+            <span class="kpi-nota">@Model.EventosAsistidos.Count @(Model.EventosAsistidos.Count == 1 ? "evento asistido" : "eventos asistidos")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Evento de mayor costo</span>
+            <span class="kpi-valor kpi-texto" data-kpi="mayor-costo">@(Model.MayorPrecioEntrada?.Evento ?? "—")</span>
+            <span class="kpi-nota">@(Model.MayorPrecioEntrada == null ? "sin compras" : $"{Formato.Monto(Model.MayorPrecioEntrada.Value.Precio)} por entrada")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Mayor gasto en un evento</span>
+            <span class="kpi-valor kpi-texto" data-kpi="mayor-gasto">@(Model.MayorGastoEvento?.Evento ?? "—")</span>
+            <span class="kpi-nota">@(Model.MayorGastoEvento == null ? "sin compras" : Formato.Monto(Model.MayorGastoEvento.Value.Total))</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Categoría preferida</span>
+            <span class="kpi-valor kpi-texto" data-kpi="categoria">@(Model.CategoriaPreferida?.Categoria ?? "—")</span>
+            <span class="kpi-nota">@(Model.CategoriaPreferida == null ? "" : $"{Model.CategoriaPreferida.Value.Entradas} entradas")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Puntaje RFM</span>
+            <span class="kpi-valor" data-kpi="rfm">@r.R·@r.F·@r.M</span>
+            <span class="kpi-nota">@(r.Compras == 0 ? "sin compras" : $"última compra hace {r.DiasDesdeUltima} días")</span>
+        </div>
+    </section>
+
+    <div class="graficos-dashboard">
+        <section class="tarjeta-panel">
+            <h2>Últimas compras</h2>
+            <p class="texto-tenue">Hasta 10, de la más reciente a la más antigua</p>
+            @if (Model.UltimasCompras.Count == 0)
+            {
+                <p class="texto-tenue">Este usuario no tiene compras pagadas.</p>
+            }
+            else
+            {
+                <div class="tabla-contenedor">
+                    <table class="tabla-datos" id="ultimasCompras">
+                        <thead><tr><th>Fecha</th><th>Evento</th><th class="derecha">Entradas</th><th class="derecha">Total</th></tr></thead>
+                        <tbody>
+                            @foreach (var c in Model.UltimasCompras)
+                            {
+                                <tr>
+                                    <td class="num">@c.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@c.Evento <span class="texto-tenue">· @c.Codigo</span></td>
+                                    <td class="derecha num">@c.Entradas</td>
+                                    <td class="derecha num">@Formato.Monto(c.Total)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="tarjeta-panel">
+            <h2>Eventos asistidos</h2>
+            <p class="texto-tenue">Con entradas validadas en la puerta</p>
+            @if (Model.EventosAsistidos.Count == 0)
+            {
+                <p class="texto-tenue">Aún no asistió a ningún evento.</p>
+            }
+            else
+            {
+                <div class="tabla-contenedor">
+                    <table class="tabla-datos" id="eventosAsistidos">
+                        <thead><tr><th>Evento</th><th>Fecha</th><th class="derecha">Entradas usadas</th></tr></thead>
+                        <tbody>
+                            @foreach (var e in Model.EventosAsistidos)
+                            {
+                                <tr>
+                                    <td>@e.Evento</td>
+                                    <td class="num">@e.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td class="derecha num">@e.Entradas</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+</div>

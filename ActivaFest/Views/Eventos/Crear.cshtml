@@ -1,0 +1,24 @@
+@model EventoFormViewModel
+@{
+    ViewData["Title"] = "Crear evento";
+}
+
+@section Styles {
+    <partial name="_LeafletCss" />
+    <link rel="stylesheet" href="~/css/plano.css" asp-append-version="true" />
+}
+
+<a asp-action="MisEventos" class="enlace-volver">← Mis eventos</a>
+<header class="cat-encabezado">
+    <p class="cat-migas">Activa-Fest / Organizador</p>
+    <h1>Publica tu <span class="degradado">evento</span></h1>
+    <p class="cat-subtitulo">Completa los 4 pasos. El evento quedará pendiente hasta que un administrador lo apruebe.</p>
+</header>
+
+<partial name="_FormularioEvento" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_LeafletJs" />
+    <script src="~/js/crear-evento.js" asp-append-version="true"></script>
+}

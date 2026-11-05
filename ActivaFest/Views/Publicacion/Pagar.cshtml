@@ -1,0 +1,51 @@
+@model Evento
+@{
+    ViewData["Title"] = "Pagar publicación";
+    var tarifa = (decimal)ViewBag.Tarifa;
+    var tramos = (IReadOnlyList<TramoTarifa>)ViewBag.Tramos;
+    int? desde = 1;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-solicitud">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Organizador / Publicar evento gratuito</p>
+        <h1>Publica tu evento <span class="degradado">gratuito</span></h1>
+        <p class="cat-subtitulo">En los eventos de entrada libre no se venden entradas: solo se paga una vez por publicarlos, según su aforo. Así financiamos la difusión, el mapa, el plano y la medición de cuánta gente atrae tu evento.</p>
+    </header>
+
+    <div class="solicitud-columnas">
+        <section class="tarjeta-panel" aria-labelledby="tituloResumen">
+            <h2 id="tituloResumen">@Model.Titulo</h2>
+            <p class="texto-suave">📅 @Formato.Fecha(Model.Fecha, "dddd dd 'de' MMMM, HH:mm") · 📍 @Model.Ubicacion</p>
+            <p>👥 Aforo: <b>@Model.Aforo.ToString("N0") personas</b></p>
+            <p class="monto-grande" data-dato="tarifa">@Formato.Monto(tarifa)</p>
+            <p class="texto-suave">Pago único. Al confirmarse, el evento pasa a revisión del administrador.</p>
+            <form asp-action="Pagar" asp-route-id="@Model.Id" method="post">
+                <button type="submit" class="btn-rosa" disabled="@(ViewBag.PasarelaDisponible != true)">💳 Pagar publicación</button>
+            </form>
+        </section>
+
+        <section class="tarjeta-panel" aria-labelledby="tituloTarifas">
+            <h2 id="tituloTarifas">Tarifas por aforo</h2>
+            <table class="tabla-tarifas">
+                <thead><tr><th>Aforo</th><th>Tarifa</th></tr></thead>
+                <tbody>
+                    @foreach (var t in tramos)
+                    {
+                        <tr class="@(t.Tarifa == tarifa ? "tramo-actual" : "")">
+                            <td>@(t.HastaAforo is int hasta ? $"{desde:N0} a {hasta:N0} personas" : $"Más de {(desde - 1):N0} personas")</td>
+                            <td>@(t.Tarifa == 0 ? "Gratis" : Formato.Monto(t.Tarifa))</td>
+                        </tr>
+                        desde = t.HastaAforo + 1;
+                    }
+                </tbody>
+            </table>
+            <p class="texto-suave">Los eventos gratuitos no venden entradas ni necesitan personal de control. Puedes destacarlos en la portada con un paquete publicitario.</p>
+        </section>
+    </div>
+</div>

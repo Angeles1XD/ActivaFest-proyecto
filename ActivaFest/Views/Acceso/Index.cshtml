@@ -1,0 +1,46 @@
+@model List<Evento>
+@{
+    ViewData["Title"] = "Control de acceso";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-compra">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Puerta</p>
+        <h1>Control de <span class="degradado">acceso</span></h1>
+        <p class="cat-subtitulo">Elige el evento y escanea las entradas con la cámara de tu celular.</p>
+    </header>
+
+    @if (Model.Count == 0)
+    {
+        <div class="cat-vacio">
+            <p>No tienes eventos próximos para controlar.</p>
+            @if (User.IsInRole(Roles.ControlAcceso) && !User.IsInRole(Roles.Administrador))
+            {
+                <p class="texto-tenue">Solo puedes validar las entradas de los eventos que el administrador te asignó.</p>
+            }
+        </div>
+    }
+
+    <div class="lista-acceso">
+        @foreach (var e in Model)
+        {
+            var hoy = e.Fecha.Date == DateTime.Today;
+            <a asp-action="Escanear" asp-route-id="@e.Id" class="item-acceso @(hoy ? "hoy" : "")">
+                <div>
+                    <strong>@e.Titulo</strong>
+                    <span>📅 @Formato.Fecha(e.Fecha, "ddd dd MMM · HH:mm") · 📍 @e.Ubicacion</span>
+                </div>
+                @if (hoy)
+                {
+                    <span class="chip-hoy">HOY</span>
+                }
+                <span class="flecha" aria-hidden="true">→</span>
+            </a>
+        }
+    </div>
+</div>

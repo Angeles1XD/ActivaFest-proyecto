@@ -1,0 +1,291 @@
+@model EventoFormViewModel
+@inject ActivaFest.Services.Eventos.IEventoGratuitoService Gratuitos
+@{
+    var categorias = (List<Categoria>)ViewBag.Categorias;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var accion = Model.EsEdicion ? "Editar" : "Crear";
+}
+
+<form asp-action="@accion" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="form-evento" id="formEvento">
+    <div asp-validation-summary="All" class="validacion"></div>
+
+    <!-- 1. INFORMACIÓN GENERAL -->
+    <fieldset class="seccion-form">
+        <legend>1. Información general</legend>
+
+        <div class="campo">
+            <label asp-for="Titulo"></label>
+            <input asp-for="Titulo" maxlength="150" />
+            <span asp-validation-for="Titulo" class="text-danger"></span>
+        </div>
+
+        <div class="campos-fila">
+            <div class="campo">
+                <label asp-for="CategoriaId"></label>
+                <select asp-for="CategoriaId">
+                    <option value="">Selecciona...</option>
+                    @foreach (var c in categorias)
+                    {
+                        <option value="@c.Id">@c.Icono @c.Nombre</option>
+                    }
+                </select>
+                <span asp-validation-for="CategoriaId" class="text-danger"></span>
+            </div>
+
+            <div class="campo">
+                <label asp-for="Fecha"></label>
+                <input asp-for="Fecha" type="datetime-local" />
+                <span asp-validation-for="Fecha" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="campo">
+            <label asp-for="Descripcion"></label>
+            <textarea asp-for="Descripcion" rows="5" maxlength="4000"
+                      placeholder="Cuenta de qué trata el evento, artistas, horarios de puertas, recomendaciones..."></textarea>
+            <span asp-validation-for="Descripcion" class="text-danger"></span>
+        </div>
+    </fieldset>
+
+    <!-- 2. UBICACIÓN (HU04) -->
+    <fieldset class="seccion-form">
+        <legend>2. Ubicación del recinto</legend>
+
+        <div class="campo">
+            <label asp-for="Ubicacion"></label>
+            <div class="campo-con-boton">
+                <input asp-for="Ubicacion" maxlength="200" placeholder="Ej. Estadio Nacional, Lima" />
+                <button type="button" id="btnBuscarDireccion" class="btn-gris">🔍 Buscar en el mapa</button>
+            </div>
+            <span asp-validation-for="Ubicacion" class="text-danger"></span>
+        </div>
+
+        <p class="texto-suave">Haz clic en el mapa o arrastra el marcador hasta la entrada del recinto.</p>
+        <p id="ubicacionInfo" class="ruta-info" role="status" aria-live="polite"></p>
+
+        <div id="mapaSelector" class="mapa mapa-selector"
+             data-lat="@Model.Latitud?.ToString(inv)" data-lng="@Model.Longitud?.ToString(inv)"></div>
+
+        <input type="hidden" asp-for="Latitud" />
+        <input type="hidden" asp-for="Longitud" />
+        <span asp-validation-for="Latitud" class="text-danger"></span>
+    </fieldset>
+
+    <!-- 3. PLANO DEL RECINTO, ZONAS Y PRECIOS (HU25) -->
+    <fieldset class="seccion-form">
+        <legend>3. Plano del recinto, zonas y precios</legend>
+        <p class="texto-suave">Elige una plantilla: el plano se genera solo a partir de tus zonas (no necesitas dibujarlo).</p>
+
+        <div class="plantillas" role="radiogroup" aria-label="Plantilla del plano">
+            @foreach (var p in Enum.GetValues<PlantillaPlano>())
+            {
+                <label class="plantilla-opcion">
+                    <input type="radio" name="Plantilla" value="@p" checked="@(Model.Plantilla == p)"
+                           data-max-zonas="@ActivaFest.Services.Plano.PlanoService.MaxZonas[p]" />
+                    <b>@ActivaFest.Services.Plano.PlanoService.Nombre(p)</b>
+                    <small>@ActivaFest.Services.Plano.PlanoService.Descripcion(p)</small>
+                </label>
+            }
+        </div>
+        <p class="texto-suave solo-teatro">
+            En teatro cada zona tiene sus filas y asientos por fila (máx. @ActivaFest.Services.Plano.PlanoService.MaxAsientosPorFila por fila,
+            @ActivaFest.Services.Plano.PlanoService.MaxFilasTeatro filas en total). La primera zona queda más cerca del escenario. Usa precio 0 para entradas gratuitas.
+        </p>
+
+        @* HU34: entrada libre: no se venden entradas; solo se paga una vez la publicación según el aforo *@
+        @{
+            var esGratuito = Model.TiposEntrada.Count > 0 && Model.TiposEntrada.All(t => t.Precio == 0);
+            int? desdeTramo = 1;
+        }
+        <div class="opcion-gratuito">
+            <label class="opcion">
+                <input type="checkbox" id="eventoGratuito" checked="@esGratuito" disabled="@Model.EsEdicion" />
+                <b>🎉 Evento gratuito (entrada libre)</b>
+            </label>
+            <p class="texto-suave">
+                No se venden entradas ni se pide personal de control: el público marca «Me interesa» y tú ves cuánta gente atrae.
+                Se paga una sola vez por publicarlo, según el aforo:
+                @foreach (var t in Gratuitos.Tramos)
+                {
+                    <span class="chip-tarifa">@(t.HastaAforo is int hasta ? $"hasta {hasta:N0}" : $"más de {(desdeTramo - 1):N0}"): @(t.Tarifa == 0 ? "gratis" : Formato.Monto(t.Tarifa))</span>
+                    desdeTramo = t.HastaAforo + 1;
+                }
+                @if (Model.EsEdicion)
+                {
+                    <br /><span>Un evento no puede pasar de pago a gratuito ni al revés.</span>
+                }
+            </p>
+        </div>
+
+        <div id="tiposEntrada">
+            @for (var i = 0; i < Model.TiposEntrada.Count; i++)
+            {
+                var t = Model.TiposEntrada[i];
+                var comprometidas = t.Comprometidas;
+                <div class="tipo-entrada" data-comprometidas="@comprometidas">
+                    @if (t.Id is int tipoId)
+                    {
+                        <input type="hidden" name="TiposEntrada[@i].Id" value="@tipoId" />
+                    }
+                    <div class="campo">
+                        <label>Zona</label>
+                        <input name="TiposEntrada[@i].Nombre" value="@t.Nombre" maxlength="60" required />
+                    </div>
+                    <div class="campo campo-precio">
+                        <label>Precio (S/)</label>
+                        <input name="TiposEntrada[@i].Precio" value="@t.Precio.ToString(inv)"
+                               type="number" min="0" max="100000" step="0.01" required />
+                    </div>
+                    <div class="campo solo-teatro">
+                        <label>Filas</label>
+                        <input name="TiposEntrada[@i].Filas" value="@t.Filas" type="number" min="1" max="@ActivaFest.Services.Plano.PlanoService.MaxFilasTeatro" step="1" />
+                    </div>
+                    <div class="campo solo-teatro">
+                        <label>Asientos por fila</label>
+                        <input name="TiposEntrada[@i].AsientosPorFila" value="@t.AsientosPorFila" type="number" min="2" max="@ActivaFest.Services.Plano.PlanoService.MaxAsientosPorFila" step="1" />
+                    </div>
+                    <div class="campo campo-capacidad">
+                        <label>Aforo</label>
+                        <input name="TiposEntrada[@i].Capacidad" value="@t.Capacidad"
+                               type="number" min="@Math.Max(1, comprometidas)" max="1000000" step="1" required />
+                        @if (comprometidas > 0)
+                        {
+                            <small class="texto-suave">@comprometidas vendidas o reservadas</small>
+                        }
+                    </div>
+                    <div class="campo">
+                        <label>Puerta</label>
+                        <input name="TiposEntrada[@i].Puerta" value="@t.Puerta" maxlength="40" placeholder="Puerta 1" />
+                    </div>
+                    <div class="campo campo-color">
+                        <label>Color</label>
+                        <input name="TiposEntrada[@i].Color" value="@ActivaFest.Services.Plano.PlanoService.ColorValido(t.Color, i)" type="color" />
+                    </div>
+                    <button type="button" class="btn-quitar" aria-label="Quitar zona"
+                            title="@(comprometidas > 0 ? "Esta zona tiene compras y no se puede quitar" : "Quitar zona")">✖</button>
+                </div>
+            }
+        </div>
+
+        <button type="button" id="btnAgregarTipo" class="btn-gris">+ Agregar zona</button>
+        <p class="texto-suave">Aforo total del evento (suma de las zonas): <b id="aforoTotal">0</b> personas</p>
+        <span asp-validation-for="TiposEntrada" class="text-danger"></span>
+
+        <div class="vista-previa-plano">
+            <p class="texto-suave">Vista previa del plano:</p>
+            <div id="vistaPreviaPlano" class="plano-lienzo" aria-live="polite"
+                 data-url="@Url.Action("VistaPreviaPlano", "Eventos")"></div>
+        </div>
+
+        <!-- Plano oficial: la imagen real del recinto, como referencia para el asistente -->
+        <div class="campo plano-oficial-campo">
+            <label asp-for="PlanoOficialArchivo">🗺️ Plano oficial del recinto <span class="texto-suave">(opcional)</span></label>
+            <p class="texto-suave">
+                Si el recinto tiene su propio plano (el del teatro, estadio o local), súbelo como imagen JPG, PNG o WEBP (máx. 5 MB).
+                Se mostrará en la ficha junto al plano interactivo para que el asistente reconozca el lugar; la compra se sigue haciendo en el plano interactivo.
+            </p>
+            @if (!string.IsNullOrEmpty(Model.PlanoOficialActual))
+            {
+                <div class="plano-oficial-actual">
+                    <a href="@Model.PlanoOficialActual" target="_blank" rel="noopener"><img src="@Model.PlanoOficialActual" alt="Plano oficial actual del recinto" /></a>
+                    <label class="opcion-quitar"><input type="checkbox" asp-for="QuitarPlanoOficial" /> Quitar el plano oficial</label>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.PlanoSubido))
+            {
+                <div class="plano-oficial-actual">
+                    <a href="@Model.PlanoSubido" target="_blank" rel="noopener"><img src="@Model.PlanoSubido" alt="Plano que ya subiste" /></a>
+                    <label class="opcion-quitar"><input type="checkbox" name="PlanoSubido" value="@Model.PlanoSubido" checked /> Usar el plano que ya subiste</label>
+                </div>
+            }
+            <input asp-for="PlanoOficialArchivo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+            <span asp-validation-for="PlanoOficialArchivo" class="text-danger"></span>
+        </div>
+    </fieldset>
+
+    <!-- 4. FOTOS (HU03) -->
+    <fieldset class="seccion-form">
+        <legend>4. Fotos del recinto</legend>
+        <p class="texto-suave">
+            Sube entre @EventoFormViewModel.MinFotos y @EventoFormViewModel.MaxFotos imágenes (JPG, PNG o WEBP, máx. 5 MB cada una).
+            La primera será la portada.
+        </p>
+
+        @if (Model.ImagenesActuales.Count > 0)
+        {
+            <p class="texto-suave">Fotos actuales: marca las que quieras quitar.</p>
+            <div class="preview-fotos fotos-actuales">
+                @foreach (var imagen in Model.ImagenesActuales)
+                {
+                    <input type="hidden" name="ImagenesActualesIds" value="@imagen.Id" />
+                    <label class="foto-actual">
+                        <img src="@imagen.Ruta" alt="" loading="lazy" />
+                        <span><input type="checkbox" name="ImagenesEliminar" value="@imagen.Id" checked="@Model.ImagenesEliminar.Contains(imagen.Id)" /> Quitar</span>
+                    </label>
+                }
+            </div>
+            <p class="texto-suave">Agregar más fotos (opcional):</p>
+        }
+
+        @if (Model.FotosSubidas.Count > 0)
+        {
+            <p class="texto-suave" data-dato="fotos-subidas">✅ Estas fotos ya las subiste, no hace falta volver a elegirlas (desmarca la que no quieras):</p>
+            <div class="preview-fotos fotos-actuales">
+                @foreach (var ruta in Model.FotosSubidas)
+                {
+                    <label class="foto-actual">
+                        <img src="@ruta" alt="" loading="lazy" />
+                        <span><input type="checkbox" name="FotosSubidas" value="@ruta" checked /> Usar</span>
+                    </label>
+                }
+            </div>
+            @if (Model.ImagenesActuales.Count == 0)
+            {
+                <p class="texto-suave">Agregar más fotos (opcional):</p>
+            }
+        }
+
+        <div class="campo">
+            <input asp-for="Fotos" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+            <span asp-validation-for="Fotos" class="text-danger"></span>
+        </div>
+
+        <div id="previewFotos" class="preview-fotos"></div>
+    </fieldset>
+
+    <button type="submit" class="btn-rosa btn-grande">@(Model.EsEdicion ? "Guardar cambios" : "Enviar a revisión")</button>
+</form>
+
+<template id="plantillaTipo">
+    <div class="tipo-entrada">
+        <div class="campo">
+            <label>Zona</label>
+            <input data-campo="Nombre" maxlength="60" required />
+        </div>
+        <div class="campo campo-precio">
+            <label>Precio (S/)</label>
+            <input data-campo="Precio" type="number" min="0" max="100000" step="0.01" value="0" required />
+        </div>
+        <div class="campo solo-teatro">
+            <label>Filas</label>
+            <input data-campo="Filas" type="number" min="1" max="@ActivaFest.Services.Plano.PlanoService.MaxFilasTeatro" step="1" value="5" />
+        </div>
+        <div class="campo solo-teatro">
+            <label>Asientos por fila</label>
+            <input data-campo="AsientosPorFila" type="number" min="2" max="@ActivaFest.Services.Plano.PlanoService.MaxAsientosPorFila" step="1" value="16" />
+        </div>
+        <div class="campo campo-capacidad">
+            <label>Aforo</label>
+            <input data-campo="Capacidad" type="number" min="1" max="1000000" step="1" value="100" required />
+        </div>
+        <div class="campo">
+            <label>Puerta</label>
+            <input data-campo="Puerta" maxlength="40" placeholder="Puerta 1" />
+        </div>
+        <div class="campo campo-color">
+            <label>Color</label>
+            <input data-campo="Color" type="color" value="#6366f1" />
+        </div>
+        <button type="button" class="btn-quitar" aria-label="Quitar zona">✖</button>
+    </div>
+</template>

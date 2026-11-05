@@ -1,0 +1,241 @@
+/* =============================
+   🗺️ PLANO DEL RECINTO (HU25)
+   ============================= */
+.plano-lienzo {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.plano-svg {
+  display: block;
+  width: 100%;
+  min-width: 480px;
+  height: auto;
+  font-family: var(--fuente);
+}
+
+/* Textos comunes */
+.plano-escenario-texto { fill: #fff; font-size: 17px; font-weight: 700; letter-spacing: 4px; }
+.plano-nota { fill: var(--texto-3); font-size: 12px; }
+.plano-fila { fill: var(--texto-2); font-size: 11px; font-weight: 700; }
+
+/* 🎭 Teatro: sala, telón, tablado y candilejas */
+.plano-sala { fill: #15151d; stroke: #2a2a36; stroke-width: 2; }
+.plano-telon { stroke: #3b0a1c; stroke-width: 1; }
+.plano-tablado { stroke: #8b6b52; stroke-width: 1.5; }
+.plano-candileja { fill: #fde68a; filter: drop-shadow(0 0 3px #fbbf24); }
+.plano-pasillo { fill: #3b1f2e; opacity: .55; }
+.plano-pasillo-linea { stroke: #f9a8d4; stroke-opacity: .25; stroke-width: 1; stroke-dasharray: 4 6; }
+.plano-rotulo-zona text { fill: #fff; font-size: 10.5px; font-weight: 700; }
+.plano-rotulo-zona rect { stroke: rgba(0, 0, 0, .35); }
+
+/* 🪑 Butacas (asiento, respaldo y apoyabrazos con su número) */
+.asiento .butaca { stroke: rgba(0, 0, 0, .35); stroke-width: .8; }
+.asiento .butaca-respaldo, .asiento .butaca-brazo { fill-opacity: .6; }
+.butaca-num { fill: #fff; font-size: 7.5px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+.asiento-ocupado .butaca-num { fill-opacity: .35; }
+.asiento-ocupado .butaca { stroke: none; }
+.asiento-tuyo .butaca { stroke: #fff; stroke-width: 2; }
+.plano-etiqueta-tuya { fill: #f9a8d4; font-size: 13px; font-weight: 700; paint-order: stroke; stroke: #15151d; stroke-width: 3px; }
+
+/* Zonas (estadio, campo abierto, feria) */
+.plano-zona-forma { stroke: rgba(255, 255, 255, .3); stroke-width: 1.5; }
+.plano-zona-agotada .plano-zona-forma { opacity: .6; }
+.plano-zona-tuya .plano-zona-forma { stroke: #fff; stroke-width: 4; }
+.plano-zona-nombre { fill: #fff; font-size: 16px; font-weight: 700; paint-order: stroke; stroke: rgba(0, 0, 0, .45); stroke-width: 3px; pointer-events: none; }
+.plano-zona-dato { fill: #fff; font-size: 13px; paint-order: stroke; stroke: rgba(0, 0, 0, .45); stroke-width: 3px; pointer-events: none; }
+.plano-textura, .plano-gradas { pointer-events: none; }
+
+/* 🏟️ Estadio */
+.plano-estadio-casco { fill: #1c1c26; stroke: #34344a; stroke-width: 2; }
+.plano-estadio-explanada { fill: #22222e; }
+.plano-gradas line { stroke: rgba(0, 0, 0, .3); stroke-width: 1.5; }
+.plano-tribuna-vacia { fill: #2e2e3a; stroke: rgba(255, 255, 255, .08); }
+.plano-cancha-linea { stroke: rgba(255, 255, 255, .85); stroke-width: 1.6; }
+.plano-arco { fill: #fff; }
+.plano-luz { fill: #fef3c7; }
+.plano-luz-halo { fill: #fde68a; opacity: .14; }
+
+/* 🎤 Campo abierto */
+.plano-terreno { stroke: #1f4d33; stroke-width: 2; }
+.plano-truss { fill: none; stroke: #a1a1aa; stroke-width: 2; stroke-dasharray: 6 3; }
+.plano-truss-linea { stroke: #71717a; stroke-width: 2; }
+.plano-led { stroke: #e0f2fe; stroke-opacity: .5; }
+.plano-parlante { fill: #0a0a0f; stroke: #52525b; }
+.plano-valla { fill: none; stroke: #e4e4e7; stroke-opacity: .6; stroke-width: 2; stroke-dasharray: 2 4; }
+.plano-foh { fill: #27272a; stroke: #a1a1aa; }
+
+/* 🎪 Feria */
+.plano-pabellon { stroke: #3f3f50; stroke-width: 3; }
+.plano-stand-base { fill: #24242f; stroke: #3f3f50; }
+.plano-mostrador { fill: #52525b; }
+.plano-stand-num { fill: var(--texto-2); font-size: 13px; font-weight: 700; }
+.plano-patio { fill: rgba(245, 158, 11, .06); stroke: rgba(245, 158, 11, .35); stroke-dasharray: 5 4; }
+.plano-mesa { fill: #3f3f46; }
+.plano-silla { fill: #71717a; }
+.plano-molinete { fill: #e4e4e7; opacity: .8; pointer-events: none; }
+
+/* Servicios y puertas */
+.plano-servicio rect { fill: rgba(255, 255, 255, .06); stroke: var(--borde); }
+.plano-servicio text { fill: var(--texto-2); font-size: 12px; }
+.plano-puerta rect { fill: rgba(139, 92, 246, 0.2); stroke: rgba(139, 92, 246, 0.6); }
+.plano-puerta text { fill: var(--lila); font-size: 13px; font-weight: 600; }
+
+.plano-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  color: var(--texto-2);
+  font-size: 14px;
+}
+
+.plano-punto {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+
+/* Formulario del organizador */
+.plantillas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.plantilla-opcion {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+}
+
+.plantilla-opcion:has(input:checked) {
+  border-color: var(--morado);
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.plantilla-opcion input { margin-right: 6px; }
+.plantilla-opcion small { display: block; color: var(--texto-3); margin-top: 4px; }
+
+.solo-teatro { display: none; }
+.form-evento.es-teatro .solo-teatro { display: block; }
+.form-evento.es-teatro .campo-capacidad input { background: var(--superficie); }
+
+.vista-previa-plano { margin-top: 18px; }
+
+/* Fila de zona con los datos del plano: se acomoda en varias líneas si no cabe */
+.form-evento .tipo-entrada {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: flex-end;
+}
+
+.form-evento .tipo-entrada .campo {
+  flex: 1 1 100px;
+  margin: 0;
+}
+
+.form-evento .tipo-entrada .campo:first-of-type { flex: 2 1 170px; }
+.form-evento .tipo-entrada .campo-color { flex: 0 0 64px; }
+.form-evento .tipo-entrada .campo-color input { width: 100%; height: 40px; padding: 2px; cursor: pointer; }
+.form-evento .tipo-entrada .btn-quitar { margin-top: 0; margin-bottom: 4px; }
+.form-evento.es-teatro .tipo-entrada .solo-teatro { display: block; }
+
+/* =============================
+   🪑 SELECCIÓN EN EL PLANO (HU26)
+   ============================= */
+.plano-interactivo .asiento[data-libre="1"],
+.plano-interactivo .plano-zona:not(.plano-zona-agotada) { cursor: pointer; }
+.plano-interactivo .asiento[data-libre="1"]:hover .butaca,
+.plano-interactivo .asiento:focus-visible .butaca { stroke: #fff; stroke-width: 2; }
+.plano-interactivo .asiento:focus-visible { outline: none; }
+.plano-interactivo .plano-zona:not(.plano-zona-agotada):hover .plano-zona-forma,
+.plano-interactivo .plano-zona:focus-visible .plano-zona-forma { stroke: #fff; stroke-width: 3; }
+.plano-interactivo .plano-zona:focus-visible { outline: none; }
+.asiento-elegido > rect { fill: #ec4899; }
+.asiento-elegido .butaca { stroke: #fff; stroke-width: 2; }
+
+.asientos-elegidos ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.asientos-elegidos li { padding: 4px 10px; border-radius: 999px; background: rgba(236, 72, 153, 0.15); color: #f9a8d4; font-size: 13px; }
+.contador-zona { font-weight: 700; }
+
+/* =============================
+   🔍 ZOOM, PESTAÑAS Y PLANO OFICIAL
+   ============================= */
+#panelPlanoInteractivo { position: relative; }
+.plano-zoom {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  display: flex; gap: 4px; padding: 4px; border-radius: 10px;
+  background: rgba(10, 10, 15, .75); border: 1px solid var(--borde);
+}
+.plano-zoom button {
+  min-width: 34px; height: 30px; padding: 0 8px; border: 0; border-radius: 7px;
+  background: rgba(255, 255, 255, .08); color: var(--texto); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.plano-zoom button:hover:not(:disabled) { background: rgba(255, 255, 255, .16); }
+.plano-zoom button:disabled { opacity: .35; cursor: default; }
+.plano-lienzo.con-zoom { max-height: 75vh; overflow: auto; cursor: grab; }
+
+.plano-pestanas { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.plano-pestanas button {
+  padding: 8px 14px; border-radius: 999px; border: 1px solid var(--borde);
+  background: transparent; color: var(--texto-2); font: inherit; font-size: 14px; cursor: pointer;
+}
+.plano-pestanas button.activa { background: rgba(139, 92, 246, .18); border-color: var(--morado); color: var(--texto); font-weight: 600; }
+
+.plano-oficial { display: block; border-radius: var(--radio); overflow: hidden; border: 1px solid var(--borde); background: #fff; }
+.plano-oficial img { display: block; width: 100%; max-height: 80vh; object-fit: contain; }
+
+.plano-leyenda-estados li { display: flex; align-items: center; gap: 6px; }
+.butaca-icono { width: 20px; height: 18px; }
+
+/* Formulario: plano oficial actual */
+.plano-oficial-campo { margin-top: 18px; }
+.plano-oficial-actual { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 8px 0; }
+.plano-oficial-actual img { width: 160px; max-height: 110px; object-fit: contain; border-radius: 8px; border: 1px solid var(--borde); background: #fff; }
+
+/* 🥊 Coliseo */
+.plano-gradas ellipse { fill: none; stroke: rgba(0, 0, 0, .3); stroke-width: 1.5; }
+.plano-ring { fill: #e5e7eb; stroke: #9ca3af; stroke-width: 2; }
+.plano-ring-cuerdas { fill: #f3f4f6; stroke: #ef4444; stroke-width: 2; }
+.plano-ring-poste { fill: #1f2937; }
+.plano-ring-texto { fill: #374151; font-size: 11px; font-weight: 800; letter-spacing: 2px; }
+
+/* 🪩 Discoteca */
+.plano-local { fill: #120f1c; stroke: #3b2a5a; stroke-width: 3; }
+.plano-haz { opacity: .14; pointer-events: none; }
+.plano-dj { fill: #1f1b2e; stroke: #a855f7; stroke-width: 2; }
+.plano-plato { fill: #0a0a0f; stroke: #67e8f9; stroke-width: 2; }
+.plano-dj-texto { fill: #f0abfc; font-size: 13px; font-weight: 800; }
+.plano-sofa, .plano-sofa-box { fill: rgba(0, 0, 0, .35); stroke: rgba(255, 255, 255, .35); }
+.plano-sofa-box { fill: none; stroke-width: 6; stroke-linecap: round; }
+.plano-mobiliario { pointer-events: none; }
+.plano-barra { fill: #1e1b2b; stroke: #f59e0b; stroke-opacity: .5; }
+.plano-barra-mostrador { fill: #f59e0b; opacity: .55; }
+.plano-baranda { stroke: #e4e4e7; stroke-width: 2; stroke-dasharray: 3 3; opacity: .7; pointer-events: none; }
+.plano-area-vacia { fill: rgba(255, 255, 255, .04); stroke: rgba(255, 255, 255, .12); stroke-dasharray: 6 4; }
+
+/* =============================
+   🎉 HU34: eventos gratuitos (entrada libre)
+   ============================= */
+.opcion-gratuito { margin: 6px 0 14px; padding: 12px 14px; border-radius: 12px; background: rgba(34, 197, 94, .08); border: 1px solid rgba(34, 197, 94, .25); }
+.opcion-gratuito .opcion { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.opcion-gratuito p { margin: 6px 0 0; }
+.chip-tarifa { display: inline-block; margin: 2px 4px 0 0; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: rgba(255, 255, 255, .08); }
+.form-evento.es-gratuito .campo-precio { display: none; }
+.ficha-gratuita { border: 1px solid rgba(34, 197, 94, .3); }
+.ficha-gratuita h3 { color: #86efac; }
+.contador-interes { font-size: 16px; }
+.badge-gratuito { background: rgba(34, 197, 94, .18); color: #86efac; }

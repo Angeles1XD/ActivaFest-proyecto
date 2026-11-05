@@ -1,0 +1,38 @@
+/* ============================= */
+/* ASISTENTE VIRTUAL: BOTÓN DE VOZ */
+/* ============================= */
+#chat-voz {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--borde);
+  background: var(--fondo);
+  color: var(--texto);
+  font-size: 17px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#chat-voz[hidden] {
+  display: none;
+}
+
+#chat-voz:hover {
+  border-color: var(--morado);
+}
+
+#chat-voz.escuchando {
+  border-color: var(--rosa);
+  background: linear-gradient(135deg, var(--morado), var(--rosa));
+  animation: chat-voz-pulso 1.2s ease-in-out infinite;
+}
+
+@keyframes chat-voz-pulso {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.55); }
+  50% { box-shadow: 0 0 0 8px rgba(236, 72, 153, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #chat-voz.escuchando { animation: none; }
+}

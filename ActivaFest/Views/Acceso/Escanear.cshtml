@@ -1,0 +1,51 @@
+@model Evento
+@{
+    ViewData["Title"] = "Escanear entradas";
+    int ingresados = ViewBag.Ingresados, vendidas = ViewBag.Vendidas;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+@* Token antiforgery para las llamadas fetch del escáner *@
+@Html.AntiForgeryToken()
+
+<div class="pagina-categorias escaner" id="escaner" data-evento="@Model.Id">
+    <div class="escaner-cabecera">
+        <a asp-action="Index" class="enlace-volver-claro">← Eventos</a>
+        <h1>@Model.Titulo</h1>
+        <p>@Formato.Fecha(Model.Fecha, "dddd dd MMM · HH:mm") · Puertas desde @Model.InicioIngreso.ToString("HH:mm")</p>
+        <p class="contador" aria-live="polite">
+            <strong id="ingresados">@ingresados</strong> de <span id="vendidas">@vendidas</span> ingresaron
+        </p>
+    </div>
+
+    <div id="lector" class="lector" aria-label="Vista de la cámara"></div>
+
+    <!-- Resultado grande y a color para leerlo de un vistazo en la puerta (+ icono y texto, nunca solo color) -->
+    <div id="resultado" class="resultado oculto" role="status" aria-live="assertive">
+        <div class="resultado-icono" id="resultadoIcono"></div>
+        <p class="resultado-titulo" id="resultadoTitulo"></p>
+        <p class="resultado-mensaje" id="resultadoMensaje"></p>
+        <p class="resultado-detalle" id="resultadoDetalle"></p>
+        <button type="button" class="cat-boton" id="btnSiguiente">Escanear siguiente</button>
+    </div>
+
+    <p id="estadoCamara" class="estado-camara">Iniciando cámara...</p>
+
+    <details class="manual">
+        <summary>¿La cámara no funciona? Ingresa el código</summary>
+        <form id="formManual" class="form-manual">
+            <input id="codigoManual" autocomplete="off" placeholder="Pega aquí el contenido del QR (AF1....)" />
+            <button type="submit" class="cat-boton">Validar</button>
+        </form>
+    </details>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
+            integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+" crossorigin="anonymous"></script>
+    <script src="~/js/escaner.js" asp-append-version="true"></script>
+}

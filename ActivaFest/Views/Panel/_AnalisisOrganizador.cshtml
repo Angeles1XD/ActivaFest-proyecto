@@ -1,0 +1,151 @@
+@using ActivaFest.Services.Analitica
+@model ActivaFest.Services.Panel.ListadoPanel
+@{
+    var f = Model.Filtro;
+    var esAdmin = User.IsInRole(Roles.Administrador);
+    var eventos = (List<OpcionEvento>)ViewBag.EventosAnalisis;
+    var filtro = (FiltroAnalitica)ViewBag.FiltroAnalisis;
+    var rango = (string)ViewBag.RangoAnalisis;
+    var desde = filtro.Desde.ToString("yyyy-MM-dd");
+    var hasta = filtro.Hasta.ToString("yyyy-MM-dd");
+    var evento = eventos.FirstOrDefault(e => e.Id == filtro.EventoId);
+    var categoria = Model.Categorias.FirstOrDefault(c => c.Id == filtro.CategoriaId);
+}
+
+<!-- 📈 Análisis de ventas con filtros por período, categoría y evento -->
+<section class="tarjeta-panel" id="seccionAnalisisPanel" aria-labelledby="tituloAnalisisPanel">
+    <h2 id="tituloAnalisisPanel">📈 Análisis de @(esAdmin ? "ventas" : "tus ventas")</h2>
+    <p class="texto-tenue">Elige el período, la categoría o un evento y todos los gráficos de abajo se actualizan.</p>
+    <form method="get" action="@Url.Action("Index", "Panel")#seccionAnalisisPanel" class="filtros filtros-reporte filtros-dashboard" id="filtrosAnalisis">
+        <input type="hidden" name="Q" value="@f.Q" />
+        <input type="hidden" name="Estado" value="@f.Estado" />
+        <input type="hidden" name="CategoriaId" value="@f.CategoriaId" />
+        <input type="hidden" name="Periodo" value="@f.Periodo" />
+        <div class="filtro">
+            <label for="rango">Período</label>
+            <select id="rango" name="rango">
+                @foreach (var r in FiltroAnalitica.Rangos)
+                {
+                    <option value="@r.Clave" selected="@(r.Clave == rango)">@r.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="filtro filtro-fecha">
+            <label for="desde">Desde</label>
+            <input id="desde" name="desde" type="date" value="@desde" />
+        </div>
+        <div class="filtro filtro-fecha">
+            <label for="hasta">Hasta</label>
+            <input id="hasta" name="hasta" type="date" value="@hasta" />
+        </div>
+        <div class="filtro">
+            <label for="catAnalisis">Categoría</label>
+            <select id="catAnalisis" name="catAnalisis">
+                <option value="">Todas las categorías</option>
+                @foreach (var c in Model.Categorias)
+                {
+                    <option value="@c.Id" selected="@(filtro.CategoriaId == c.Id)">@c.Icono @c.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="filtro">
+            <label for="eventoId">Evento</label>
+            <select id="eventoId" name="eventoId">
+                <option value="">Todos los eventos</option>
+                @foreach (var e in eventos.Where(e => filtro.CategoriaId == null || e.CategoriaId == filtro.CategoriaId))
+                {
+                    <option value="@e.Id" selected="@(filtro.EventoId == e.Id)">@e.Titulo</option>
+                }
+            </select>
+        </div>
+        <div class="filtro-acciones">
+            <button type="submit" class="btn-rosa">Aplicar</button>
+            <a asp-action="Index" class="btn-gris enlace-boton">Limpiar</a>
+        </div>
+    </form>
+    <p class="resumen-filtro">
+        Mostrando compras pagadas del <b>@filtro.Desde.ToString("dd/MM/yyyy")</b> al <b>@filtro.Hasta.ToString("dd/MM/yyyy")</b>
+        · <b>@(categoria == null ? "todas las categorías" : $"{categoria.Icono} {categoria.Nombre}")</b>
+        · <b>@(evento?.Titulo ?? "todos los eventos")</b>
+    </p>
+</section>
+
+<div class="analisis" id="analisis" data-url-evento="@Url.Action("Evento", "Panel")"
+     data-url="@Url.Action("Analisis", "Panel", new { rango, desde = rango == "personalizado" ? desde : null, hasta = rango == "personalizado" ? hasta : null, catAnalisis = filtro.CategoriaId, eventoId = filtro.EventoId })">
+    <p class="texto-tenue" id="analisisEstado" aria-live="polite">Cargando el análisis…</p>
+
+    <section class="fila-kpi fila-kpi-dashboard" aria-label="Indicadores del análisis">
+        <div class="kpi kpi-hero"><span class="kpi-etiqueta">Ingresos</span><span class="kpi-valor" id="analisisIngresos">—</span><span class="kpi-nota">en el período</span></div>
+        <div class="kpi"><span class="kpi-etiqueta">Neto</span><span class="kpi-valor" id="analisisNeto">—</span><span class="kpi-nota">tras la comisión</span></div>
+        <div class="kpi"><span class="kpi-etiqueta">Entradas</span><span class="kpi-valor" id="analisisEntradas">—</span><span class="kpi-nota">vendidas</span></div>
+        <div class="kpi"><span class="kpi-etiqueta">Compradores</span><span class="kpi-valor" id="compradoresTotal">—</span><span class="kpi-nota">usuarios únicos</span></div>
+        <div class="kpi"><span class="kpi-etiqueta">Nuevos</span><span class="kpi-valor" id="compradoresNuevos">—</span><span class="kpi-nota">su primera compra</span></div>
+        <div class="kpi"><span class="kpi-etiqueta">Recurrentes</span><span class="kpi-valor" id="compradoresRecurrentes">—</span><span class="kpi-nota">volvieron a comprar</span></div>
+        <div class="kpi"><span class="kpi-etiqueta">Ticket promedio</span><span class="kpi-valor" id="compradoresTicket">—</span><span class="kpi-nota">por compra</span></div>
+    </section>
+
+    <div class="graficos-dashboard graficos-iguales">
+        <section class="tarjeta-panel">
+            <h2>Ingresos por mes</h2>
+            <p class="texto-tenue">Soles, últimos @AnaliticaService.MesesTendencia meses hasta el @filtro.Hasta.ToString("dd/MM/yyyy")</p>
+            <p class="texto-tenue" id="graficoMesesVacio" hidden>No hay ingresos en estos meses.</p>
+            <div class="grafico-chart"><canvas id="graficoMeses" role="img" aria-label="Ingresos por mes"></canvas></div>
+            <details class="ver-tabla" id="tablaMeses"><summary>Ver tabla</summary></details>
+        </section>
+        <section class="tarjeta-panel">
+            <h2>Compras por día de la semana</h2>
+            <p class="texto-tenue">Compras pagadas en el período; el día con más ventas va resaltado</p>
+            <p class="texto-tenue" id="graficoDiasVacio" hidden>No hay compras en este período.</p>
+            <div class="grafico-chart"><canvas id="graficoDias" role="img" aria-label="Compras por día de la semana"></canvas></div>
+            <details class="ver-tabla" id="tablaDias"><summary>Ver tabla</summary></details>
+        </section>
+        <section class="tarjeta-panel">
+            <h2>🥧 Ingresos por categoría</h2>
+            <p class="texto-tenue">Parte de cada categoría en el período</p>
+            <p class="texto-tenue" id="tortaCategoriasVacio" hidden>No hay ingresos en este período.</p>
+            <div class="grafico-chart"><canvas id="tortaCategorias" role="img" aria-label="Ingresos por categoría"></canvas></div>
+            <details class="ver-tabla" id="tablaTortaCategorias"><summary>Ver tabla</summary></details>
+        </section>
+        <section class="tarjeta-panel">
+            <h2>🍩 @(esAdmin ? "Eventos" : "Tus eventos") por estado</h2>
+            <p class="texto-tenue">Sin importar el período</p>
+            <p class="texto-tenue" id="tortaEstadosVacio" hidden>Aún no hay eventos.</p>
+            <div class="grafico-chart"><canvas id="tortaEstados" role="img" aria-label="Eventos por estado"></canvas></div>
+            <details class="ver-tabla" id="tablaEstados"><summary>Ver tabla</summary></details>
+        </section>
+        <section class="tarjeta-panel">
+            <h2>Entradas por zona</h2>
+            <p class="texto-tenue">Entradas vendidas en el período, por tipo de entrada</p>
+            <p class="texto-tenue" id="graficoZonasVacio" hidden>No hay entradas vendidas en este período.</p>
+            <div class="grafico-chart"><canvas id="graficoZonas" role="img" aria-label="Entradas vendidas por zona"></canvas></div>
+            <details class="ver-tabla" id="tablaZonas"><summary>Ver tabla</summary></details>
+        </section>
+        <section class="tarjeta-panel">
+            <h2>En qué terminaron las reservas</h2>
+            <p class="texto-tenue">Órdenes creadas en el período, según su estado</p>
+            <p class="texto-tenue" id="graficoOrdenesVacio" hidden>No se crearon órdenes en este período.</p>
+            <div class="grafico-chart"><canvas id="graficoOrdenes" role="img" aria-label="Órdenes por estado"></canvas></div>
+            <details class="ver-tabla" id="tablaOrdenes"><summary>Ver tabla</summary></details>
+        </section>
+    </div>
+
+    <partial name="_GraficosComparativos" />
+
+    <section class="tarjeta-panel" aria-labelledby="tituloTopEventos">
+        <h2 id="tituloTopEventos">🏆 Eventos con más ventas</h2>
+        <p class="texto-tenue" id="graficoTopEventosVacio" hidden>No hay eventos con ventas en este período.</p>
+        <div class="grafico-chart"><canvas id="graficoTopEventos" role="img" aria-label="Ingresos de los eventos con más ventas"></canvas></div>
+        <div class="tabla-contenedor">
+            <table class="tabla-datos" id="tablaTopEventos">
+                <thead><tr><th>#</th><th>Evento</th><th>Categoría</th><th class="derecha">Entradas</th><th class="derecha">Ingresos</th><th class="derecha">Comisión</th><th class="derecha">Ocupación</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="tarjeta-panel" aria-labelledby="tituloRecomendaciones">
+        <h2 id="tituloRecomendaciones">💡 Recomendaciones</h2>
+        <p class="texto-tenue">Calculadas con las cifras de este período: cada una muestra el dato que la justifica.</p>
+        <div class="lista-recomendaciones" id="listaRecomendaciones"></div>
+    </section>
+</div>

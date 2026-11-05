@@ -1,0 +1,94 @@
+@model ActivaFest.Services.Compras.Carrito
+@{
+    ViewData["Title"] = "Mi carrito";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+}
+
+<div class="pagina-categorias pagina-compra pagina-carrito">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Mi cuenta</p>
+        <h1>Mi <span class="degradado">carrito</span></h1>
+        <p class="cat-subtitulo">Tus entradas reservadas. Cada reserva se mantiene unos minutos: págala antes de que venza para recibir tus códigos QR.</p>
+    </header>
+
+    @if (Model.PorPagar.Count == 0)
+    {
+        <div class="cat-vacio">
+            <span class="entradas-vacio-icono" aria-hidden="true">🛒</span>
+            <p>Tu carrito está vacío.</p>
+            <a asp-controller="Eventos" asp-action="Index" class="cat-boton">Explorar eventos</a>
+        </div>
+    }
+    else
+    {
+        <div class="carrito-columnas">
+            <div class="carrito-lista">
+                @foreach (var item in Model.PorPagar)
+                {
+                    <article class="carrito-item" data-dato="carrito-item">
+                        @if (item.Imagen != null)
+                        {
+                            <img src="@item.Imagen" alt="" class="carrito-foto" />
+                        }
+                        <div class="carrito-detalle">
+                            <h2><a asp-controller="Eventos" asp-action="Detalle" asp-route-id="@item.EventoId">@item.Evento</a></h2>
+                            <p>📅 @Formato.Fecha(item.Fecha, "dddd dd 'de' MMMM, HH:mm")</p>
+                            <p>📍 @item.Ubicacion</p>
+                            <ul class="carrito-lineas">
+                                @foreach (var linea in item.Lineas)
+                                {
+                                    <li><span>@linea.Cantidad × @linea.Zona</span><span>@Formato.Monto(linea.Subtotal)</span></li>
+                                }
+                                @if (item.Descuento > 0)
+                                {
+                                    <li><span>Descuento</span><span>− @Formato.Monto(item.Descuento)</span></li>
+                                }
+                            </ul>
+                        </div>
+                        <div class="carrito-acciones">
+                            <span class="carrito-reloj" data-vence="@DateTime.SpecifyKind(item.Vence, DateTimeKind.Utc).ToString("o")">⏳ --:--</span>
+                            <b class="carrito-total">@Formato.Monto(item.Total)</b>
+                            <a asp-controller="Compras" asp-action="Checkout" asp-route-codigo="@item.Codigo" class="btn-rosa btn-bloque enlace-boton">💳 Pagar</a>
+                            <form asp-action="Cancelar" method="post">
+                                <input type="hidden" name="codigo" value="@item.Codigo" />
+                                <button type="submit" class="btn-gris btn-bloque">Cancelar reserva</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+
+            <aside class="carrito-resumen" aria-label="Resumen del carrito">
+                <h2>Resumen</h2>
+                <p><span>Reservas</span><b>@Model.PorPagar.Count</b></p>
+                <p><span>Entradas</span><b>@Model.Entradas</b></p>
+                <p class="carrito-resumen-total"><span>Total</span><b>@Formato.Monto(Model.Total)</b></p>
+                <p class="texto-suave">Cada reserva se paga por separado porque pertenece a un evento distinto.</p>
+            </aside>
+        </div>
+    }
+
+    @if (Model.Vencidas.Count > 0)
+    {
+        <section class="carrito-vencidas" aria-labelledby="tituloVencidas">
+            <h2 id="tituloVencidas">Reservas vencidas</h2>
+            <p class="texto-suave">Se acabó el tiempo y las entradas se liberaron. Puedes volver a elegirlas si siguen disponibles.</p>
+            <ul>
+                @foreach (var item in Model.Vencidas)
+                {
+                    <li>
+                        <span>@item.Evento · @item.Entradas @(item.Entradas == 1 ? "entrada" : "entradas") · @Formato.Monto(item.Total)</span>
+                        <a asp-controller="Eventos" asp-action="Detalle" asp-route-id="@item.EventoId" asp-fragment="comprar">Volver a elegir</a>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/carrito.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,303 @@
+/* ============================= */
+/* TEMA VIVO: colores animados en todas las páginas */
+/* Se carga al final del layout. Cada rol tiene su propia paleta (clase en <body>) */
+/* ============================= */
+
+/* Visitantes y usuarios: violeta, cian y rosa */
+body {
+  --a1: #a78bfa;
+  --a2: #22d3ee;
+  --a3: #f472b6;
+  --a4: #60a5fa;
+}
+
+/* Organizadores: tonos cálidos de festival */
+body.tema-organizador {
+  --a1: #f472b6;
+  --a2: #fb923c;
+  --a3: #fbbf24;
+  --a4: #c084fc;
+}
+
+/* Administrador: tonos fríos de control */
+body.tema-admin {
+  --a1: #22d3ee;
+  --a2: #34d399;
+  --a3: #60a5fa;
+  --a4: #a78bfa;
+}
+
+/* Personal de control de acceso: verde de "puerta abierta" */
+body.tema-acceso {
+  --a1: #34d399;
+  --a2: #a3e635;
+  --a3: #22d3ee;
+  --a4: #60a5fa;
+}
+
+/* ---------- Fondo animado con la paleta del rol ---------- */
+.orbe-1 { background: radial-gradient(circle, var(--a1), transparent 68%); }
+.orbe-2 { background: radial-gradient(circle, var(--a2), transparent 68%); }
+.orbe-3 { background: radial-gradient(circle, var(--a3), transparent 68%); }
+.orbe-4 { background: radial-gradient(circle, var(--a4), transparent 68%); }
+
+/* ---------- Texto con degradado que fluye ---------- */
+.degradado,
+.text-gradient {
+  background: linear-gradient(90deg, var(--a1), var(--a2), var(--a3), var(--a4), var(--a1));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--a1) 40%, transparent));
+  animation: tema-fluye 9s linear infinite;
+}
+
+@keyframes tema-fluye {
+  to { background-position: 300% 0; }
+}
+
+/* Títulos principales sin palabra resaltada: blanco que se tiñe del color del rol */
+.tarjeta-compra h1,
+.confirmacion-encabezado h1,
+.panel-cabecera h1,
+.escaner-cabecera h1,
+.titulo-entradas {
+  display: inline-block;
+  background: linear-gradient(90deg, #fff 0%, #fff 35%, var(--a1) 70%, var(--a2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Migas de pan: pequeñas, en degradado */
+.cat-migas {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--a2), var(--a1));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.cat-subtitulo b,
+.cat-subtitulo strong {
+  color: var(--a2);
+}
+
+/* Subtítulos de sección con un brillo suave */
+.main-content h2:not(.text-gradient) {
+  text-shadow: 0 0 26px color-mix(in srgb, var(--a1) 35%, transparent);
+}
+
+.main-content h3 {
+  color: color-mix(in srgb, var(--a1) 45%, #fff);
+}
+
+/* ---------- Tarjetas de panel: cada una con su color ---------- */
+.tarjeta-panel {
+  --acento: var(--a1);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.tarjeta-panel:nth-of-type(4n + 2) { --acento: var(--a2); }
+.tarjeta-panel:nth-of-type(4n + 3) { --acento: var(--a3); }
+.tarjeta-panel:nth-of-type(4n + 4) { --acento: var(--a4); }
+
+.tarjeta-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--acento), transparent);
+  opacity: 0.8;
+}
+
+.tarjeta-panel:hover {
+  border-color: color-mix(in srgb, var(--acento) 45%, transparent);
+  box-shadow: 0 0 32px -12px var(--acento);
+}
+
+.tarjeta-panel h2 {
+  color: color-mix(in srgb, var(--acento) 55%, #fff);
+}
+
+/* ---------- KPIs: cifras de colores ---------- */
+.kpi {
+  --acento: var(--a1);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+
+.kpi:nth-child(4n + 2) { --acento: var(--a2); }
+.kpi:nth-child(4n + 3) { --acento: var(--a3); }
+.kpi:nth-child(4n + 4) { --acento: var(--a4); }
+
+.kpi::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  right: -30%;
+  width: 70%;
+  height: 120%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--acento) 22%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.kpi:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--acento) 50%, transparent);
+  box-shadow: 0 10px 30px -14px var(--acento);
+}
+
+.kpi .kpi-valor {
+  color: color-mix(in srgb, var(--acento) 35%, #fff);
+}
+
+.kpi-hero .kpi-valor {
+  background: linear-gradient(90deg, #fff, var(--a1), var(--a2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- Tablas y formularios ---------- */
+.tabla-datos th {
+  color: color-mix(in srgb, var(--a2) 70%, #fff);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tabla-datos tbody tr {
+  transition: background 0.2s;
+}
+
+.tabla-datos tbody tr:hover td {
+  background: color-mix(in srgb, var(--a1) 7%, transparent);
+}
+
+.campo label,
+.inicio-campo label {
+  color: color-mix(in srgb, var(--a1) 60%, #fff);
+  font-weight: 600;
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  border-color: var(--a1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a1) 25%, transparent);
+}
+
+/* Tarjeta principal de compra/pago con un contorno de color */
+.tarjeta-compra {
+  border-color: color-mix(in srgb, var(--a1) 30%, transparent);
+  box-shadow: 0 0 50px -24px var(--a1);
+}
+
+/* ---------- Navegación y marca ---------- */
+.marca-icono {
+  background: linear-gradient(135deg, var(--a1), var(--a3), var(--a2));
+  background-size: 200% 200%;
+  box-shadow: 0 0 16px -4px var(--a1);
+  animation: tema-fluye-icono 6s ease-in-out infinite alternate;
+}
+
+@keyframes tema-fluye-icono {
+  to { background-position: 100% 100%; }
+}
+
+.marca-texto {
+  background: linear-gradient(90deg, var(--a1), var(--a2), var(--a3), var(--a1));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: tema-fluye 12s linear infinite;
+}
+
+.nav-links a:hover {
+  color: color-mix(in srgb, var(--a1) 40%, #fff);
+}
+
+.nav-links a.activo {
+  position: relative;
+  background: color-mix(in srgb, var(--a1) 16%, transparent);
+  color: #fff;
+}
+
+.nav-links a.activo::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--a1), var(--a2));
+}
+
+.avatar {
+  background: linear-gradient(135deg, var(--a1), var(--a2));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a1) 35%, transparent);
+}
+
+/* Etiqueta del rol junto al usuario */
+.nav-rol {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--a1) 50%, transparent);
+  background: color-mix(in srgb, var(--a1) 15%, transparent);
+  color: color-mix(in srgb, var(--a1) 55%, #fff);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cat-boton,
+.boton-degradado {
+  background: linear-gradient(135deg, var(--a1), var(--a4));
+}
+
+.cat-boton:hover,
+.boton-degradado:hover {
+  box-shadow: 0 8px 26px -8px var(--a1);
+}
+
+/* Pie de página: línea de color arriba */
+.pie {
+  position: relative;
+}
+
+.pie::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--a1), var(--a2), var(--a3), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .degradado,
+  .text-gradient,
+  .marca-icono,
+  .marca-texto {
+    animation: none;
+  }
+
+  .kpi:hover {
+    transform: none;
+  }
+}

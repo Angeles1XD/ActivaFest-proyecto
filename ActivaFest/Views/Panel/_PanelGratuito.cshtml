@@ -1,0 +1,35 @@
+@model Evento
+@inject ActivaFest.Services.Eventos.IEventoGratuitoService Gratuitos
+@{
+    // HU34: en un evento gratuito el organizador ve cuánta gente atrajo
+    var (interesados, _) = await Gratuitos.InteresAsync(Model.Id, null);
+    var tasa = Model.Visitas == 0 ? 0 : interesados * 100.0 / Model.Visitas;
+    var ocupacionEsperada = Model.Aforo == 0 ? 0 : interesados * 100.0 / Model.Aforo;
+}
+
+<section class="fila-kpi" aria-label="Alcance del evento gratuito" data-dato="panel-gratuito">
+    <div class="kpi kpi-hero">
+        <span class="kpi-etiqueta">Visitas a la ficha</span>
+        <span class="kpi-valor">@Model.Visitas.ToString("N0")</span>
+        <span class="kpi-nota">personas que vieron tu evento</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-etiqueta">Me interesa</span>
+        <span class="kpi-valor">@interesados.ToString("N0")</span>
+        <span class="kpi-nota">@tasa.ToString("0.#")% de las visitas</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-etiqueta">Aforo</span>
+        <span class="kpi-valor">@Model.Aforo.ToString("N0")</span>
+        <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.Round(Math.Min(100, ocupacionEsperada))" aria-label="Interesados frente al aforo">
+            <span style="width: @Math.Min(100, ocupacionEsperada).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"></span>
+        </div>
+        <span class="kpi-nota">@ocupacionEsperada.ToString("0.#")% del aforo ya mostró interés</span>
+    </div>
+</section>
+
+<section class="tarjeta-panel">
+    <h2>🎉 Evento de entrada libre</h2>
+    <p>No se venden entradas ni se necesita personal de control: el público entra por orden de llegada. Usa estas cifras para saber cuánta gente esperar.</p>
+    <p class="texto-suave">¿Quieres más alcance? Destaca tu evento en la portada con un paquete publicitario.</p>
+</section>

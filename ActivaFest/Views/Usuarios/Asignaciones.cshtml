@@ -1,0 +1,114 @@
+@model ActivaFest.Controllers.AsignacionesViewModel
+@{
+    ViewData["Title"] = "Asignar eventos";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-entradas">
+    <a asp-action="Index" class="enlace-volver">← Usuarios</a>
+
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Administración / Personal de control</p>
+        <h1>Eventos de <span class="degradado">@Model.Nombre</span></h1>
+        <p class="cat-subtitulo">@Model.Email solo podrá validar en puerta las entradas de los eventos que le asignes.</p>
+    </header>
+
+    <!-- Eventos que ya tiene asignados -->
+    <section class="bloque-asignacion" aria-labelledby="tituloAsignados">
+        <h2 id="tituloAsignados">✅ Asignado a @Model.EventosAsignados.Count @(Model.EventosAsignados.Count == 1 ? "evento" : "eventos")</h2>
+        @if (Model.EventosAsignados.Count == 0)
+        {
+            <p class="texto-suave">Todavía no tiene eventos. Búscalos abajo y pulsa «Asignar».</p>
+        }
+        else
+        {
+            <ul class="lista-asignacion" id="listaAsignados">
+                @foreach (var e in Model.EventosAsignados)
+                {
+                    <li class="fila-asignacion">
+                        <span>
+                            <strong>@e.Titulo</strong><br />
+                            <span class="texto-tenue">📅 @Formato.Fecha(e.Fecha, "ddd dd MMM yyyy · HH:mm") · 📍 @e.Ubicacion</span>
+                        </span>
+                        <form asp-action="Quitar" method="post">
+                            <input type="hidden" name="id" value="@Model.UsuarioId" />
+                            <input type="hidden" name="eventoId" value="@e.Id" />
+                            <input type="hidden" name="buscar" value="@Model.Buscar" />
+                            <input type="hidden" name="pagina" value="@Model.Pagina" />
+                            <button type="submit" class="btn-gris">Quitar</button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <!-- 🔎 Buscar eventos para asignar -->
+    <section class="bloque-asignacion" aria-labelledby="tituloBuscar">
+        <h2 id="tituloBuscar">🔎 Buscar eventos</h2>
+        <form asp-action="Asignaciones" asp-route-id="@Model.UsuarioId" method="get" class="buscador-asignacion" role="search">
+            <input type="search" name="buscar" value="@Model.Buscar" maxlength="100" placeholder="Nombre del evento o lugar" aria-label="Buscar evento por nombre o lugar" autofocus />
+            <button type="submit" class="cat-boton">Buscar</button>
+            @if (!string.IsNullOrEmpty(Model.Buscar))
+            {
+                <a asp-action="Asignaciones" asp-route-id="@Model.UsuarioId" class="btn-gris enlace-boton">Limpiar</a>
+            }
+        </form>
+        <p class="texto-tenue" data-dato="resultados">
+            @(string.IsNullOrEmpty(Model.Buscar) ? "Próximos eventos aprobados" : $"Resultados para «{Model.Buscar}»"): @Model.Total @(Model.Total == 1 ? "evento" : "eventos")
+        </p>
+
+        @if (Model.Total == 0)
+        {
+            <div class="cat-vacio"><p>@(string.IsNullOrEmpty(Model.Buscar) ? "No hay eventos aprobados próximos." : "Ningún evento coincide con la búsqueda.")</p></div>
+        }
+        else
+        {
+            <ul class="lista-asignacion" id="resultadosEventos">
+                @foreach (var e in Model.Eventos)
+                {
+                    var asignado = Model.Asignados.Contains(e.Id);
+                    <li class="fila-asignacion">
+                        <span>
+                            <strong>@e.Titulo</strong><br />
+                            <span class="texto-tenue">📅 @Formato.Fecha(e.Fecha, "ddd dd MMM yyyy · HH:mm") · 📍 @e.Ubicacion</span>
+                        </span>
+                        @if (asignado)
+                        {
+                            <span class="chip-asignado">✅ Asignado</span>
+                        }
+                        else
+                        {
+                            <form asp-action="Asignar" method="post">
+                                <input type="hidden" name="id" value="@Model.UsuarioId" />
+                                <input type="hidden" name="eventoId" value="@e.Id" />
+                                <input type="hidden" name="buscar" value="@Model.Buscar" />
+                                <input type="hidden" name="pagina" value="@Model.Pagina" />
+                                <button type="submit" class="btn-rosa">Asignar</button>
+                            </form>
+                        }
+                    </li>
+                }
+            </ul>
+
+            @if (Model.Paginas > 1)
+            {
+                <nav class="paginacion" aria-label="Páginas de resultados">
+                    @if (Model.Pagina > 1)
+                    {
+                        <a asp-action="Asignaciones" asp-route-id="@Model.UsuarioId" asp-route-buscar="@Model.Buscar" asp-route-pagina="@(Model.Pagina - 1)" rel="prev">← Anterior</a>
+                    }
+                    <span>Página @Model.Pagina de @Model.Paginas</span>
+                    @if (Model.Pagina < Model.Paginas)
+                    {
+                        <a asp-action="Asignaciones" asp-route-id="@Model.UsuarioId" asp-route-buscar="@Model.Buscar" asp-route-pagina="@(Model.Pagina + 1)" rel="next">Siguiente →</a>
+                    }
+                </nav>
+            }
+        }
+    </section>
+</div>

@@ -1,0 +1,183 @@
+@model List<SolicitudOrganizador>
+@{
+    ViewData["Title"] = "Solicitudes";
+    var estado = (EstadoSolicitud)ViewBag.Estado;
+    var personal = (List<SolicitudPersonal>)ViewBag.Personal;
+    var cuentas = (Dictionary<string, ActivaFest.Services.Organizadores.CuentaPersonal>)ViewBag.Cuentas;
+    var pendOrg = (int)ViewBag.PendientesOrganizador;
+    var pendPer = (int)ViewBag.PendientesPersonal;
+    string F(DateTime d) => d.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+    string Plazo(PlazoOrganizador? p) => p switch { PlazoOrganizador.Indefinido => "Indefinido", null => "—", _ => $"{(int)p} días" };
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-solicitud">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Solicitudes</p>
+            <h1>Solicitudes <span class="degradado">recibidas</span></h1>
+            <p class="cat-subtitulo">Habilita cuentas para organizar eventos y asigna el personal de control que piden los organizadores.</p>
+        </div>
+        <a asp-controller="Admin" asp-action="Index" class="btn-gris enlace-boton">← Moderación</a>
+    </header>
+
+    <div class="tabs-estado">
+        @foreach (var e in Enum.GetValues<EstadoSolicitud>())
+        {
+            <a asp-action="Index" asp-route-estado="@e" class="@(e == estado ? "activo" : "")">
+                @(e switch { EstadoSolicitud.Pendiente => $"Pendientes ({pendOrg + pendPer})", EstadoSolicitud.Aprobada => "Aprobadas", _ => "Rechazadas" })
+            </a>
+        }
+    </div>
+
+    <!-- 📝 Organizadores -->
+    <section class="tarjeta-panel bloque-solicitudes" aria-labelledby="tituloOrg">
+        <h2 id="tituloOrg">📝 Habilitar organizador (@Model.Count)</h2>
+        @if (Model.Count == 0)
+        {
+            <p class="texto-suave">No hay solicitudes en este estado.</p>
+        }
+        @foreach (var s in Model)
+        {
+            <article class="solicitud" data-solicitud-organizador="@s.Id">
+                <header>
+                    <strong>@s.NombreOrganizador</strong>
+                    <span class="texto-tenue">· @s.Usuario?.Email · enviada el @F(s.FechaSolicitud)</span>
+                </header>
+                <dl class="datos-solicitud">
+                    <div><dt>@(s.Tipo == TipoOrganizador.Empresa ? "RUC" : "DNI")</dt><dd>@s.Documento</dd></div>
+                    <div><dt>Teléfono</dt><dd>@s.Telefono</dd></div>
+                    <div><dt>Plazo pedido</dt><dd>@Plazo(s.PlazoSolicitado)</dd></div>
+                    @if (!string.IsNullOrEmpty(s.WebORedes))
+                    {
+                        <div><dt>Web o redes</dt><dd>@s.WebORedes</dd></div>
+                    }
+                </dl>
+                <p class="descripcion-solicitud">@s.DescripcionEventos</p>
+
+                @if (s.Estado == EstadoSolicitud.Pendiente)
+                {
+                    <div class="acciones-solicitud">
+                        <form asp-action="AprobarOrganizador" method="post" class="form-en-linea">
+                            <input type="hidden" name="id" value="@s.Id" />
+                            <label>Habilitar por
+                                <select name="plazo">
+                                    @foreach (var p in new[] { PlazoOrganizador.Dias30, PlazoOrganizador.Dias90, PlazoOrganizador.Dias180, PlazoOrganizador.Indefinido })
+                                    {
+                                        <option value="@p" selected="@(p == s.PlazoSolicitado)">@Plazo(p)</option>
+                                    }
+                                </select>
+                            </label>
+                            <button type="submit" class="btn-rosa">✔ Aprobar</button>
+                        </form>
+                        <form asp-action="RechazarOrganizador" method="post" class="form-en-linea">
+                            <input type="hidden" name="id" value="@s.Id" />
+                            <input type="text" name="motivo" required minlength="5" maxlength="500" placeholder="Motivo del rechazo" />
+                            <button type="submit" class="btn-gris">✖ Rechazar</button>
+                        </form>
+                    </div>
+                }
+                else if (s.Estado == EstadoSolicitud.Aprobada)
+                {
+                    <p class="texto-suave">Aprobada el @F(s.FechaRespuesta!.Value) · @(s.HabilitadoHasta == null ? "sin vencimiento" : $"hasta el {s.HabilitadoHasta.Value.ToLocalTime():dd/MM/yyyy}")</p>
+                }
+                else
+                {
+                    <p class="texto-suave">Rechazada el @F(s.FechaRespuesta!.Value): @s.MotivoRechazo</p>
+                }
+            </article>
+        }
+    </section>
+
+    <!-- 🚪 Personal de control -->
+    <section class="tarjeta-panel bloque-solicitudes" aria-labelledby="tituloPer">
+        <h2 id="tituloPer">🚪 Personal de control (@personal.Count)</h2>
+        @if (personal.Count == 0)
+        {
+            <p class="texto-suave">No hay solicitudes en este estado.</p>
+        }
+        @foreach (var s in personal)
+        {
+            var pendiente = s.Estado == EstadoSolicitud.Pendiente;
+            <article class="solicitud" data-solicitud-personal="@s.Id">
+                <header>
+                    <strong>@s.Evento?.Titulo</strong>
+                    <span class="texto-tenue">· @s.Evento?.Fecha.ToString("dd/MM/yyyy HH:mm") · pedido por @s.Organizador?.Email el @F(s.FechaSolicitud)</span>
+                </header>
+                @if (pendiente && s.Evento != null)
+                {
+                    <p class="aviso-automatico" data-dato="limite-automatico">
+                        🤖 Si nadie responde, el sistema la resolverá solo el <b>@ActivaFest.Services.Organizadores.SolicitudPersonalService.LimiteRespuesta(s.Evento).ToString("dd/MM HH:mm")</b>
+                        (1 hora antes del evento): habilita las cuentas registradas y rechaza las que tengan mala reputación.
+                    </p>
+                }
+                <p><b>Personas que controlarán la puerta:</b> @(pendiente ? "marca las cuentas que vas a habilitar." : "")</p>
+                <ul class="cuentas-solicitadas">
+                    @foreach (var correo in s.ListaCorreos)
+                    {
+                        var c = cuentas.GetValueOrDefault(correo);
+                        <li data-cuenta="@correo">
+                            @if (pendiente && c is { Existe: true, Activa: true })
+                            {
+                                <input type="checkbox" name="correos" value="@correo" form="aprobar-@s.Id" checked="@(!c.MalaFama)" aria-label="Habilitar @correo" />
+                            }
+                            <span>@(c?.Nombre ?? "Cuenta no encontrada") · <span class="texto-tenue">@correo</span></span>
+                            @if (c is { Existe: true, Activa: true })
+                            {
+                                @if (c.MalaFama)
+                                {
+                                    <span class="chip-alerta" data-dato="mala-fama">⚠️ Mala reputación · @c.Reputacion!.Resumen</span>
+                                }
+                                else
+                                {
+                                    <span class="chip-asignado">@(c.EsControl ? "ya es control de acceso" : "se le habilitará el control de acceso")</span>
+                                    <span class="texto-tenue">@c.Reputacion?.Resumen</span>
+                                }
+                                <a asp-action="Reputacion" asp-route-id="@c.UsuarioId" class="enlace-detalle">Ver reputación →</a>
+                            }
+                            else
+                            {
+                                <span class="chip-alerta">@(c?.Existe == true ? "cuenta desactivada" : "no existe: no se asignará")</span>
+                                <a asp-controller="Usuarios" asp-action="Index" asp-route-buscar="@correo" class="enlace-detalle">Ver usuario →</a>
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (!string.IsNullOrEmpty(s.Mensaje))
+                {
+                    <p class="descripcion-solicitud">@s.Mensaje</p>
+                }
+                @if (pendiente)
+                {
+                    <div class="acciones-solicitud">
+                        <form asp-action="AprobarPersonal" method="post" class="form-en-linea" id="aprobar-@s.Id">
+                            <input type="hidden" name="id" value="@s.Id" />
+                            <input type="hidden" name="conSeleccion" value="true" />
+                            <button type="submit" class="btn-rosa">✔ Aprobar las marcadas</button>
+                        </form>
+                        <form asp-action="RechazarPersonal" method="post" class="form-en-linea">
+                            <input type="hidden" name="id" value="@s.Id" />
+                            <input type="text" name="motivo" required minlength="5" maxlength="500" placeholder="Motivo del rechazo" />
+                            <button type="submit" class="btn-gris">✖ Rechazar</button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <p class="texto-suave">
+                        @(s.Estado == EstadoSolicitud.Aprobada ? "Aprobada" : $"Rechazada: {s.MotivoRechazo}") el @F(s.FechaRespuesta!.Value)
+                        @(s.RespuestaAutomatica ? "· 🤖 automáticamente (nadie respondió antes de 1 hora del evento)" : "")
+                    </p>
+                    @if (!string.IsNullOrEmpty(s.Observacion))
+                    {
+                        <p class="texto-tenue" data-dato="observacion">No habilitadas: @s.Observacion</p>
+                    }
+                }
+            </article>
+        }
+    </section>
+</div>

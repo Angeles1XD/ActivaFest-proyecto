@@ -1,0 +1,35 @@
+@model Evento
+@{
+    ViewData["Title"] = "Cancelar evento";
+    var vendidas = (int)ViewBag.EntradasVendidas;
+    var compradores = (int)ViewBag.Compradores;
+}
+
+<a asp-action="MisEventos" class="enlace-volver">← Mis eventos</a>
+
+<div class="auth-card cancelar-evento">
+    <h2 class="text-gradient">Cancelar evento</h2>
+    <p><b>@Model.Titulo</b><br /><span class="texto-suave">📅 @Formato.Fecha(Model.Fecha, "dddd dd 'de' MMMM 'de' yyyy, HH:mm") · 📍 @Model.Ubicacion</span></p>
+
+    <div class="aviso-vencido">
+        <p><b>Esta acción no se puede deshacer.</b> Al cancelar:</p>
+        <ul>
+            <li>El evento se retira del catálogo y se cierra la venta.</li>
+            <li>Se anulan las @vendidas @(vendidas == 1 ? "entrada vendida" : "entradas vendidas"): sus códigos QR dejan de servir en la puerta.</li>
+            <li>Avisamos por correo a @(compradores == 1 ? "1 comprador" : $"{compradores} compradores") con el motivo que escribas.</li>
+            @if (compradores > 0)
+            {
+                <li>Debes devolver el dinero a cada comprador; estas ventas no generan comisión para ActivaFest.</li>
+            }
+        </ul>
+    </div>
+
+    <form asp-action="Cancelar" asp-route-id="@Model.Id" method="post">
+        <div class="campo">
+            <label for="motivo">Motivo de la cancelación (se envía a los compradores)</label>
+            <textarea id="motivo" name="motivo" rows="4" maxlength="500" required
+                      placeholder="Ej.: Por motivos de fuerza mayor el artista no podrá presentarse."></textarea>
+        </div>
+        <button type="submit" class="btn-rosa btn-bloque boton-cancelar-evento">🚫 Sí, cancelar el evento</button>
+    </form>
+</div>

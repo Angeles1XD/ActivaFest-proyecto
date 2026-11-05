@@ -1,0 +1,58 @@
+@model List<PaqueteDestacado>
+@{
+    ViewData["Title"] = "Paquetes publicitarios";
+    var ventas = (Dictionary<int, int>)ViewBag.Ventas;
+    var vigentes = (Dictionary<int, int>)ViewBag.Vigentes;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración</p>
+            <h1>Paquetes <span class="degradado">publicitarios</span></h1>
+            <p class="cat-subtitulo">Los cambios aplican a nuevas compras: los paquetes ya vendidos conservan su precio y vigencia.</p>
+        </div>
+        <div class="panel-acciones">
+            <a asp-controller="Admin" asp-action="Index" class="btn-gris enlace-boton">← Moderación</a>
+            <a asp-action="Editar" class="cat-boton">+ Nuevo paquete</a>
+        </div>
+    </header>
+
+    <div class="tabla-contenedor tarjeta-panel">
+        <table class="tabla-datos">
+            <thead>
+                <tr><th>Paquete</th><th class="derecha">Días</th><th class="derecha">Precio</th><th class="derecha">Prioridad</th><th class="derecha">Vendidos</th><th class="derecha">Vigentes</th><th>Estado</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr class="@(p.Activo ? "" : "fila-pasada")">
+                        <td><strong>@p.Nombre</strong><br /><span class="texto-tenue">@p.Descripcion</span></td>
+                        <td class="derecha num">@p.Dias</td>
+                        <td class="derecha num">@Formato.Monto(p.Precio)</td>
+                        <td class="derecha num">@p.Prioridad</td>
+                        <td class="derecha num">@ventas.GetValueOrDefault(p.Id)</td>
+                        <td class="derecha num">@vigentes.GetValueOrDefault(p.Id)</td>
+                        <td><span class="chip-estado @(p.Activo ? "chip-Aprobado" : "")">@(p.Activo ? "A la venta" : "Inactivo")</span></td>
+                        <td class="derecha acciones-paquete">
+                            <a asp-action="Editar" asp-route-id="@p.Id" class="enlace-detalle">Editar →</a>
+                            @* HU20: con contrataciones vigentes no se elimina, solo se desactiva *@
+                            @if (p.Activo || !ventas.ContainsKey(p.Id))
+                            {
+                            <form asp-action="Eliminar" asp-route-id="@p.Id" method="post"
+                                  onsubmit="return confirm('@(vigentes.ContainsKey(p.Id) ? "Este paquete tiene contrataciones vigentes: solo se desactivará. ¿Continuar?" : "¿Eliminar este paquete?")');">
+                                <button type="submit" class="boton-rol inactivo">@(vigentes.ContainsKey(p.Id) || ventas.ContainsKey(p.Id) ? "Desactivar" : "Eliminar")</button>
+                            </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

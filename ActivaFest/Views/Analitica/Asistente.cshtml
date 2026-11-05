@@ -1,0 +1,106 @@
+@model ActivaFest.Services.Asistente.MetricasAsistente
+@using ActivaFest.Services.Asistente
+@{
+    ViewData["Title"] = "Asistente virtual";
+    var llm = (EstadoLlm)ViewBag.Llm;
+    string Pct(double? v) => v == null ? "—" : $"{v.Value * 100:0.#} %";
+    var (icono, clase) = !llm.Activado ? ("⚪", "llm-desactivado") : llm.Disponible && llm.ModeloInstalado ? ("🟢", "llm-ok") : ("🟠", "llm-alerta");
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Analítica / Asistente</p>
+            <h1>Asistente <span class="degradado">virtual</span></h1>
+            <p class="cat-subtitulo">Consultas al chat de los usuarios en los últimos @Model.Dias días. Meta del OE3: resolver sin ayuda humana al menos el @Pct(MetricasAsistente.Meta) de las consultas.</p>
+        </div>
+        <a asp-action="Index" class="btn-gris enlace-boton">← Dashboard</a>
+    </header>
+
+    <!-- Estado de Llama 3.2 (Ollama) -->
+    <section class="tarjeta-panel estado-llm @clase" aria-label="Estado de Llama 3.2">
+        <h2>@icono Llama 3.2 (Ollama)</h2>
+        <p data-dato="estado-llm">@llm.Mensaje</p>
+        <p class="texto-tenue">Modelo: <b>@llm.Modelo</b> · Dirección: <code>@llm.Url</code></p>
+        @if (!llm.Activado || !llm.Disponible || !llm.ModeloInstalado)
+        {
+            <details>
+                <summary>Cómo activarlo</summary>
+                <ol>
+                    <li>Instala Ollama desde <b>ollama.com/download</b> y ábrelo.</li>
+                    <li>En una terminal: <code>ollama pull @llm.Modelo</code></li>
+                    <li>Crea <code>ActivaFest/appsettings.Development.json</code> con <code>{ "Asistente": { "UsarLlm": true } }</code> y vuelve a ejecutar la aplicación.</li>
+                </ol>
+                <p class="texto-tenue">Sin Llama 3.2 el asistente sigue respondiendo con la base de conocimiento y los datos de la BD; el modelo solo mejora la redacción y nunca cambia las cifras.</p>
+            </details>
+        }
+    </section>
+
+    <section class="fila-kpi" aria-label="Métricas del asistente">
+        <div class="kpi kpi-hero">
+            <span class="kpi-etiqueta">Resueltas sin ayuda humana</span>
+            <span class="kpi-valor" data-kpi="tasa">@Pct(Model.Tasa)</span>
+            <span class="kpi-nota kpi-variacion @(Model.Tasa == null ? "" : Model.CumpleMeta ? "sube" : "baja")">
+                @(Model.Tasa == null ? "aún no hay consultas" : Model.CumpleMeta ? "▲ cumple la meta del OE3" : "▼ por debajo de la meta del OE3")
+            </span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Consultas</span>
+            <span class="kpi-valor" data-kpi="total">@Model.Total.ToString("N0")</span>
+            <span class="kpi-nota">@Model.Resueltas.ToString("N0") resueltas</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Redactadas con Llama 3.2</span>
+            <span class="kpi-valor" data-kpi="llm">@Model.ConLlm.ToString("N0")</span>
+            <span class="kpi-nota">el resto con respuestas base</span>
+        </div>
+    </section>
+
+    <div class="graficos-dashboard">
+        <section class="tarjeta-panel">
+            <h2>Por intención</h2>
+            @if (Model.PorIntencion.Count == 0)
+            {
+                <p class="texto-tenue">Aún no hay consultas en este período.</p>
+            }
+            else
+            {
+                <table class="tabla-datos" id="tablaIntenciones">
+                    <thead><tr><th>Intención</th><th class="derecha">Consultas</th><th class="derecha">Resueltas</th></tr></thead>
+                    <tbody>
+                        @foreach (var i in Model.PorIntencion)
+                        {
+                            <tr><td>@i.Intencion</td><td class="derecha num">@i.Total</td><td class="derecha num">@Pct(i.Total == 0 ? null : (double)i.Resueltas / i.Total)</td></tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+
+        <section class="tarjeta-panel">
+            <h2>Últimas consultas no resueltas</h2>
+            <p class="texto-tenue">Sirven para ampliar la base de conocimiento (palabras clave y ejemplos de cada intención).</p>
+            @if (Model.NoResueltas.Count == 0)
+            {
+                <p class="texto-tenue">No hay consultas pendientes. 🎉</p>
+            }
+            else
+            {
+                <table class="tabla-datos" id="tablaPendientes">
+                    <thead><tr><th>Fecha</th><th>Pregunta</th><th>Intención</th></tr></thead>
+                    <tbody>
+                        @foreach (var c in Model.NoResueltas)
+                        {
+                            <tr><td class="num">@c.Fecha.ToLocalTime().ToString("dd/MM HH:mm")</td><td>@c.Pregunta</td><td>@c.Intencion</td></tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+    </div>
+</div>

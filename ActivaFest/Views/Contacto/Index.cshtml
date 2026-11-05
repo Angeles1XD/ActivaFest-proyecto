@@ -1,0 +1,60 @@
+@model ActivaFest.Controllers.ContactoOptions
+@{
+    ViewData["Title"] = "Contacto";
+    var esOrganizador = User.IsInRole(Roles.Organizador) || User.IsInRole(Roles.Administrador);
+    var textoWhatsApp = Uri.EscapeDataString("Hola, escribo desde ActivaFest. Necesito ayuda con: ");
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-solicitud">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Contacto</p>
+        <h1>Habla con el <span class="degradado">equipo</span></h1>
+        <p class="cat-subtitulo">Para habilitar tu cuenta como organizador o pedir personal de control, lo más rápido es enviar la solicitud desde la página: queda registrada y te respondemos por correo. También puedes escribirnos.</p>
+    </header>
+
+    <div class="contacto-opciones">
+        <section class="tarjeta-panel contacto-opcion">
+            <h2>📝 Organizar eventos</h2>
+            <p>Solicita que habiliten tu cuenta para crear eventos. Ahí verás los requisitos.</p>
+            <a asp-controller="Organizador" asp-action="Solicitar" class="btn-rosa enlace-boton">Ver requisitos y solicitar</a>
+        </section>
+
+        <section class="tarjeta-panel contacto-opcion">
+            <h2>🚪 Personal de control</h2>
+            <p>Indica qué cuentas validarán las entradas en la puerta de tu evento.</p>
+            @if (esOrganizador)
+            {
+                <a asp-controller="Personal" asp-action="Index" class="btn-rosa enlace-boton">Solicitar personal</a>
+            }
+            else
+            {
+                <ol class="pasos-personal" data-dato="pasos-personal">
+                    <li>Solicita que habiliten tu cuenta como organizador (tarjeta de al lado).</li>
+                    <li>Cuando el administrador la apruebe, crea tu evento y espera su aprobación.</li>
+                    <li>Vuelve aquí: aparecerá el botón <b>Solicitar personal</b> para escribir los correos de tus trabajadores.</li>
+                </ol>
+                <p class="texto-suave">Tu cuenta aún no es organizadora, por eso todavía no puedes pedir personal.</p>
+            }
+        </section>
+
+        @if (!string.IsNullOrEmpty(Model.WhatsAppSoloDigitos))
+        {
+            <section class="tarjeta-panel contacto-opcion">
+                <h2>💬 WhatsApp</h2>
+                <p>Escríbenos y te respondemos en horario de oficina.</p>
+                <a href="https://wa.me/@Model.WhatsAppSoloDigitos?text=@textoWhatsApp" target="_blank" rel="noopener" class="btn-whatsapp enlace-boton" data-dato="whatsapp">Abrir WhatsApp</a>
+            </section>
+        }
+
+        <section class="tarjeta-panel contacto-opcion">
+            <h2>✉️ Correo</h2>
+            <p>Cuéntanos tu caso y, si es sobre un evento, incluye su nombre.</p>
+            <a href="mailto:@Model.Correo?subject=@Uri.EscapeDataString("Consulta desde ActivaFest")" class="btn-gris enlace-boton" data-dato="correo">@Model.Correo</a>
+        </section>
+    </div>
+</div>

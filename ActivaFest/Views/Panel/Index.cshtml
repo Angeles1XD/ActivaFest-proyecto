@@ -1,0 +1,244 @@
+@model ActivaFest.Services.Panel.ListadoPanel
+@using ActivaFest.Services.Panel
+@{
+    ViewData["Title"] = "Panel de ventas";
+    var ahora = DateTime.Now;
+    var f = Model.Filtro;
+    var esAdmin = User.IsInRole(Roles.Administrador);
+
+    // HU13: gráfico Chart.js de los eventos próximos de la página (vendidas y aforo restante)
+    var datosGraficos = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        eventos = Model.Eventos.Where(e => e.Fecha >= ahora && e.Estado == EstadoEvento.Aprobado).Take(10)
+            .Select(e => new { titulo = e.Titulo, vendidas = e.Vendidas, restante = e.AforoRestante, ingresos = e.Ingresos })
+    });
+
+    // Los enlaces de página conservan la búsqueda y los filtros
+    Dictionary<string, string?> Ruta(int pagina) => new()
+    {
+        ["Q"] = f.Q,
+        ["Estado"] = f.Estado?.ToString(),
+        ["CategoriaId"] = f.CategoriaId?.ToString(),
+        ["Periodo"] = f.Periodo,
+        ["Pagina"] = pagina.ToString()
+    };
+    var desde = Model.Total == 0 ? 0 : (Model.Pagina - 1) * FiltroPanel.TamanoPagina + 1;
+    var hasta = Math.Min(Model.Total, Model.Pagina * FiltroPanel.TamanoPagina);
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / @(esAdmin ? "Administración" : "Organizador")</p>
+        <h1>Panel de <span class="degradado">ventas</span></h1>
+        <p class="cat-subtitulo">Ventas, ingresos y aforo de @(esAdmin ? "los eventos de la plataforma" : "tus eventos"), calculados a partir de las compras confirmadas.</p>
+    </header>
+
+    <!-- 🔎 Búsqueda y filtros -->
+    <form method="get" class="filtros filtros-reporte filtros-panel" role="search">
+        <div class="filtro filtro-busqueda">
+            <label for="Q">Buscar evento</label>
+            <input id="Q" name="Q" type="search" value="@f.Q" maxlength="100"
+                   placeholder="@(esAdmin ? "Título, ubicación u organizador" : "Título o ubicación")" />
+        </div>
+        <div class="filtro">
+            <label for="CategoriaId">Categoría</label>
+            <select id="CategoriaId" name="CategoriaId">
+                <option value="">Todas</option>
+                @foreach (var c in Model.Categorias)
+                {
+                    <option value="@c.Id" selected="@(f.CategoriaId == c.Id)">@c.Icono @c.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="filtro">
+            <label for="Estado">Estado</label>
+            <select id="Estado" name="Estado">
+                <option value="">Todos</option>
+                @foreach (var estado in Enum.GetValues<EstadoEvento>())
+                {
+                    <option value="@estado" selected="@(f.Estado == estado)">@estado</option>
+                }
+            </select>
+        </div>
+        <div class="filtro">
+            <label for="Periodo">Fecha</label>
+            <select id="Periodo" name="Periodo">
+                <option value="">Todos</option>
+                <option value="proximos" selected="@(f.Periodo == "proximos")">Próximos</option>
+                <option value="pasados" selected="@(f.Periodo == "pasados")">Finalizados</option>
+            </select>
+        </div>
+        <div class="filtro-acciones">
+            <button type="submit" class="btn-rosa">Buscar</button>
+            @if (f.TieneFiltros)
+            {
+                <a asp-action="Index" class="btn-gris enlace-boton">Limpiar</a>
+            }
+        </div>
+    </form>
+
+    <section class="fila-kpi" aria-label="Resumen de los eventos mostrados">
+        <div class="kpi kpi-hero">
+            <span class="kpi-etiqueta">Ingresos totales</span>
+            <span class="kpi-valor" data-kpi="ingresos">@Formato.Monto(Model.Ingresos)</span>
+            @if (f.TieneFiltros) { <span class="kpi-nota">de los eventos encontrados</span> }
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Entradas vendidas</span>
+            <span class="kpi-valor" data-kpi="vendidas">@Model.Vendidas.ToString("N0")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Eventos próximos</span>
+            <span class="kpi-valor" data-kpi="proximos">@Model.Proximos</span>
+        </div>
+    </section>
+
+    @if (Model.Total == 0 && !f.TieneFiltros)
+    {
+        <div class="cat-vacio">
+            <p>Aún no tienes eventos.</p>
+            <a asp-controller="Eventos" asp-action="Crear" class="cat-boton">Crear evento</a>
+        </div>
+    }
+    else if (Model.Total == 0)
+    {
+        <div class="cat-vacio">
+            <p>Ningún evento coincide con «@(f.Q ?? "")»@(f.Estado != null ? $" en estado {f.Estado}" : "").</p>
+            <a asp-action="Index" class="cat-boton">Ver todos</a>
+        </div>
+    }
+    else
+    {
+        <partial name="_AnalisisOrganizador" model="Model" />
+
+        @if (Model.Eventos.Any(e => e.Fecha >= ahora && e.Estado == EstadoEvento.Aprobado))
+        {
+            <section class="tarjeta-panel">
+                <h2>Próximos eventos: vendidas y aforo restante</h2>
+                <div class="grafico-chart grafico-zonas">
+                    <canvas id="graficoEventos" role="img" aria-label="Entradas vendidas y aforo restante de los próximos eventos"></canvas>
+                </div>
+            </section>
+        }
+
+        <!-- Rendimiento por categoría: ¿cuál se llena y cuál está floja? -->
+        @if (Model.PorCategoria.Count > 0)
+        {
+            <section class="tarjeta-panel rendimiento-categorias">
+                <h2>Rendimiento por categoría</h2>
+                <p class="texto-tenue">Eventos aprobados@(f.TieneFiltros ? " que cumplen la búsqueda" : ""). Ocupación = entradas vendidas ÷ aforo. Menos del 40 % es baja venta: conviene promocionar o destacar.</p>
+                <div class="tabla-contenedor">
+                    <table class="tabla-datos" id="tablaCategorias">
+                        <thead>
+                            <tr>
+                                <th>Categoría</th>
+                                <th class="derecha">Eventos</th>
+                                <th class="derecha">Vendidas / aforo</th>
+                                <th class="col-meter">Ocupación</th>
+                                <th>Nivel</th>
+                                <th class="derecha">Ingresos</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.PorCategoria)
+                            {
+                                <tr>
+                                    <td>@c.Icono @c.Nombre</td>
+                                    <td class="derecha num">@c.Eventos</td>
+                                    <td class="derecha num">@c.Vendidas.ToString("N0") / @c.Aforo.ToString("N0")</td>
+                                    <td class="col-meter">
+                                        <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.Round(c.Ocupacion * 100)"
+                                             aria-label="Ocupación de @c.Nombre">
+                                            <span style="width: @Math.Round(c.Ocupacion * 100, 1).ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span>
+                                        </div>
+                                        <small class="texto-tenue">@c.Ocupacion.ToString("P0")</small>
+                                    </td>
+                                    <td><span class="nivel-ocupacion nivel-@c.Nivel.ToLowerInvariant()">@(c.Nivel == "Alta" ? "▲" : c.Nivel == "Baja" ? "▼" : "●") @c.Nivel</span></td>
+                                    <td class="derecha num">@Formato.Monto(c.Ingresos)</td>
+                                    <td class="derecha">
+                                        @if (f.CategoriaId != c.CategoriaId)
+                                        {
+                                            <a asp-action="Index" asp-route-CategoriaId="@c.CategoriaId" asp-route-Q="@f.Q" asp-route-Periodo="@f.Periodo" class="enlace-detalle">Ver eventos →</a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+
+        <p class="texto-tenue resultado-busqueda" data-dato="resultados">
+            @desde–@hasta de @Model.Total @(Model.Total == 1 ? "evento" : "eventos")
+        </p>
+
+        <div class="tabla-contenedor">
+            <table class="tabla-datos">
+                <thead>
+                    <tr>
+                        <th>Evento</th>
+                        <th>Estado</th>
+                        <th class="derecha">Vendidas</th>
+                        <th class="derecha">Aforo restante</th>
+                        <th class="col-meter">Ocupación</th>
+                        <th class="derecha">Ingresos</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model.Eventos)
+                    {
+                        var pasado = e.Fecha < ahora;
+                        <tr class="@(pasado ? "fila-pasada" : "")">
+                            <td>
+                                <strong>@e.Titulo</strong><br />
+                                <span class="texto-tenue">@e.IconoCategoria @e.Categoria · @Formato.Fecha(e.Fecha, "ddd dd MMM yyyy · HH:mm")@(pasado ? " · Finalizado" : "")@(esAdmin && e.Organizador != null ? $" · {e.Organizador}" : "")</span>
+                            </td>
+                            <td><span class="chip-estado chip-@e.Estado">@e.Estado</span></td>
+                            <td class="derecha num">@e.Vendidas / @e.Aforo</td>
+                            <td class="derecha num">@(e.Estado == EstadoEvento.Cancelado ? "—" : e.AforoRestante.ToString("N0"))</td>
+                            <td class="col-meter">
+                                <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.Round(e.Ocupacion * 100)"
+                                     aria-label="Ocupación de @e.Titulo">
+                                    <span style="width: @Math.Round(e.Ocupacion * 100, 1).ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span>
+                                </div>
+                                <small class="texto-tenue">@e.Ocupacion.ToString("P0")</small>
+                            </td>
+                            <td class="derecha num">@Formato.Monto(e.Ingresos)</td>
+                            <td class="derecha"><a asp-action="Evento" asp-route-id="@e.Id" class="enlace-detalle">Ver panel →</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.Paginas > 1)
+        {
+            <nav class="paginacion" aria-label="Páginas de eventos">
+                @if (Model.Pagina > 1)
+                {
+                    <a asp-action="Index" asp-all-route-data="Ruta(Model.Pagina - 1)" rel="prev">← Anterior</a>
+                }
+                <span>Página @Model.Pagina de @Model.Paginas</span>
+                @if (Model.Pagina < Model.Paginas)
+                {
+                    <a asp-action="Index" asp-all-route-data="Ruta(Model.Pagina + 1)" rel="next">Siguiente →</a>
+                }
+            </nav>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script type="application/json" id="datosPanel">@Html.Raw(datosGraficos)</script>
+    <partial name="_ChartJs" />
+    <script src="~/js/panel.js" asp-append-version="true"></script>
+    <script src="~/js/analisis-dashboard.js" asp-append-version="true"></script>
+}

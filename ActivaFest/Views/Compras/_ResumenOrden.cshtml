@@ -1,0 +1,49 @@
+@model Orden
+
+<div class="resumen-evento">
+    @if (Model.Evento?.Imagenes.FirstOrDefault() is { } portada)
+    {
+        <img src="@portada.Ruta" alt="" />
+    }
+    <div>
+        <h2>@Model.Evento?.Titulo</h2>
+        <p>📅 @Formato.Fecha(Model.Evento!.Fecha, "dddd dd 'de' MMMM, HH:mm")</p>
+        <p>📍 @Model.Evento.Ubicacion</p>
+    </div>
+</div>
+
+<table class="resumen-items">
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>
+                    @if (item.Asiento != null)
+                    {
+                        @* HU26: asiento exacto *@
+                        <span>🪑 @item.TipoEntrada?.Nombre · Fila @item.Asiento.Fila, asiento @item.Asiento.Numero</span>
+                    }
+                    else
+                    {
+                        <span>@item.Cantidad × @item.TipoEntrada?.Nombre</span>
+                    }
+                </td>
+                <td class="monto">@Formato.Precio(item.Subtotal)</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        @if (Model.Descuento > 0)
+        {
+            @* HU30: cupón aplicado *@
+            <tr class="fila-descuento">
+                <td>🎁 Cupón @Model.Cupon?.Codigo</td>
+                <td class="monto">− @Formato.Precio(Model.Descuento)</td>
+            </tr>
+        }
+        <tr>
+            <td>Total</td>
+            <td class="monto">@Formato.Precio(Model.Total)</td>
+        </tr>
+    </tfoot>
+</table>

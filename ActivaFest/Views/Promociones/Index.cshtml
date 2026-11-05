@@ -1,0 +1,57 @@
+@model List<ActivaFest.Services.Promociones.ResumenPromocion>
+@{
+    ViewData["Title"] = "Promociones";
+    var hoy = DateTime.Now;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Promociones</p>
+            <h1>Promociones y <span class="degradado">cupones</span></h1>
+            <p class="cat-subtitulo">Para crear una promoción, filtra a tus clientes y selecciona a quiénes enviarla.</p>
+        </div>
+        <div class="panel-acciones">
+            <a asp-controller="Analitica" asp-action="Clientes" class="btn-rosa enlace-boton">🔎 Filtrar clientes</a>
+            <a asp-controller="Admin" asp-action="Index" class="btn-gris enlace-boton">← Moderación</a>
+        </div>
+    </header>
+
+    <section class="tarjeta-panel">
+        @if (Model.Count == 0)
+        {
+            <p class="texto-tenue">Aún no hay promociones.</p>
+        }
+        else
+        {
+            <div class="tabla-contenedor">
+                <table class="tabla-datos" id="tablaPromociones">
+                    <thead>
+                        <tr><th>Promoción</th><th>Descuento</th><th>Vigencia</th><th class="derecha">Cupones</th><th class="derecha">Usados</th><th>Estado</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model)
+                        {
+                            var p = r.Promocion;
+                            var estado = !p.Activa ? "Desactivada" : p.Vigente(hoy) ? "Vigente" : hoy < p.FechaInicio ? "Programada" : "Vencida";
+                            <tr>
+                                <td>@p.Nombre</td>
+                                <td>@p.Etiqueta</td>
+                                <td class="num">@p.FechaInicio.ToString("dd/MM/yyyy") – @p.FechaFin.ToString("dd/MM/yyyy")</td>
+                                <td class="derecha num">@r.Cupones</td>
+                                <td class="derecha num">@r.Usados@(p.LimiteUsos != null ? $" / {p.LimiteUsos}" : "")</td>
+                                <td><span class="badge-segmento">@estado</span></td>
+                                <td><a asp-action="Detalle" asp-route-id="@p.Id" class="enlace-detalle">Ver →</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

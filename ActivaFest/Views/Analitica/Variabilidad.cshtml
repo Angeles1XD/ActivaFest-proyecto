@@ -1,0 +1,218 @@
+@model ActivaFest.Services.Analitica.ReporteVariabilidad
+@using System.Text.Json
+@using ActivaFest.Services.Analitica
+@{
+    ViewData["Title"] = "Variabilidad de la demanda";
+    var categorias = (List<Categoria>)ViewBag.Categorias;
+    var u = Model.Umbrales;
+    var desde = Model.Desde.ToString("yyyy-MM-dd");
+    var hasta = Model.Hasta.ToString("yyyy-MM-dd");
+    var pe = System.Globalization.CultureInfo.GetCultureInfo("es-PE");
+
+    string Num(double? v) => v == null ? "—" : v.Value.ToString("0.##", pe);
+    string Pct(double? v) => v == null ? "—" : $"{v.Value:0.#} %";
+    string Ocup(double? v) => v == null ? "—" : $"{v.Value * 100:0.#} %";
+    string Icono(Semaforo s) => s switch { Semaforo.Rojo => "🔴", Semaforo.Ambar => "🟡", _ => "🟢" };
+    string Texto(Semaforo s) => s switch { Semaforo.Rojo => "Actuar", Semaforo.Ambar => "Monitorear", _ => "Mantener" };
+
+    var datosGrafico = JsonSerializer.Serialize(new
+    {
+        eventos = Model.Eventos.Where(e => e.Ventas.Cv != null).Take(15).Select(e => new
+        {
+            titulo = e.Evento, cv = Math.Round(e.Ventas.Cv!.Value, 1),
+            color = e.Semaforo switch { Semaforo.Rojo => "#ef4444", Semaforo.Ambar => "#f59e0b", _ => "#22c55e" }
+        }),
+        estable = u.CvEstable, inestable = u.CvInestable
+    });
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Analítica / Variabilidad</p>
+            <h1>Variabilidad de la <span class="degradado">demanda</span></h1>
+            <p class="cat-subtitulo">El promedio solo no dice si la demanda es estable. Aquí ves la dispersión de las ventas semanales, los precios y el gasto, y un semáforo con la decisión sugerida para cada evento.</p>
+        </div>
+        <a asp-action="Index" class="btn-gris enlace-boton">← Dashboard</a>
+    </header>
+
+    <form method="get" class="filtros filtros-reporte">
+        <div class="filtro">
+            <label for="desde">Ventas desde</label>
+            <input id="desde" name="desde" type="date" value="@desde" />
+        </div>
+        <div class="filtro">
+            <label for="hasta">Hasta</label>
+            <input id="hasta" name="hasta" type="date" value="@hasta" />
+        </div>
+        <div class="filtro">
+            <label for="categoriaId">Categoría</label>
+            <select id="categoriaId" name="categoriaId">
+                <option value="">Todas</option>
+                @foreach (var c in categorias)
+                {
+                    <option value="@c.Id" selected="@(Model.CategoriaId == c.Id)">@c.Icono @c.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="filtro-acciones">
+            <button type="submit" class="btn-rosa">Filtrar</button>
+        </div>
+    </form>
+
+    <!-- 🚦 Umbrales del semáforo (configurables) -->
+    <details class="tarjeta-panel umbrales" @(TempData["Error"] != null ? "open" : "")>
+        <summary>🚦 Semáforo: CV &lt; @Pct(u.CvEstable) estable · @Pct(u.CvEstable)–@Pct(u.CvInestable) monitorear · &gt; @Pct(u.CvInestable) inestable · ocupación baja &lt; @Pct(u.OcupacionBaja), alta ≥ @Pct(u.OcupacionAlta) <span class="texto-tenue">(cambiar)</span></summary>
+        <form asp-action="Umbrales" method="post" class="form-umbrales">
+            <input type="hidden" name="desde" value="@desde" />
+            <input type="hidden" name="hasta" value="@hasta" />
+            <input type="hidden" name="categoriaId" value="@Model.CategoriaId" />
+            <label>CV estable por debajo de (%) <input type="number" name="CvEstable" min="1" max="499" step="1" value="@u.CvEstable.ToString(System.Globalization.CultureInfo.InvariantCulture)" required /></label>
+            <label>CV inestable por encima de (%) <input type="number" name="CvInestable" min="2" max="500" step="1" value="@u.CvInestable.ToString(System.Globalization.CultureInfo.InvariantCulture)" required /></label>
+            <label>Ocupación baja por debajo de (%) <input type="number" name="OcupacionBaja" min="0" max="99" step="1" value="@u.OcupacionBaja.ToString(System.Globalization.CultureInfo.InvariantCulture)" required /></label>
+            <label>Ocupación alta desde (%) <input type="number" name="OcupacionAlta" min="1" max="100" step="1" value="@u.OcupacionAlta.ToString(System.Globalization.CultureInfo.InvariantCulture)" required /></label>
+            <button type="submit" class="btn-rosa">Guardar umbrales</button>
+        </form>
+        <p class="texto-tenue">🔴 Actuar: demanda inestable u ocupación baja (promocionar, destacar o revisar precio y fecha) · 🟡 Monitorear · 🟢 Mantener el precio.</p>
+    </details>
+
+    @if (Model.Eventos.Count == 0)
+    {
+        <section class="tarjeta-panel"><p class="texto-tenue">No hay ventas pagadas entre el @Model.Desde.ToString("dd/MM/yyyy") y el @Model.Hasta.ToString("dd/MM/yyyy").</p></section>
+    }
+    else
+    {
+        <section class="fila-kpi" aria-label="Resumen del semáforo">
+            @foreach (var s in new[] { Semaforo.Rojo, Semaforo.Ambar, Semaforo.Verde })
+            {
+                <div class="kpi">
+                    <span class="kpi-etiqueta">@Icono(s) @Texto(s)</span>
+                    <span class="kpi-valor" data-kpi="semaforo-@s.ToString().ToLowerInvariant()">@Model.Eventos.Count(e => e.Semaforo == s)</span>
+                    <span class="kpi-nota">eventos</span>
+                </div>
+            }
+            <div class="kpi">
+                <span class="kpi-etiqueta">Gasto por compra</span>
+                <span class="kpi-valor">S/ @Num(Model.GastoPorCompra.Media)</span>
+                <span class="kpi-nota">σ S/ @Num(Model.GastoPorCompra.Desviacion) · CV @Pct(Model.GastoPorCompra.Cv)</span>
+            </div>
+        </section>
+
+        <section class="tarjeta-panel">
+            <h2>Coeficiente de variación por evento</h2>
+            <p class="texto-tenue">CV = σ ÷ μ × 100 de las entradas vendidas por semana, del @Model.Desde.ToString("dd/MM/yyyy") al @Model.Hasta.ToString("dd/MM/yyyy").</p>
+            <div class="grafico-chart"><canvas id="graficoCv" role="img" aria-label="Coeficiente de variación de las ventas semanales por evento"></canvas></div>
+        </section>
+
+        <section class="tarjeta-panel">
+            <h2>Por evento</h2>
+            <div class="tabla-contenedor">
+                <table class="tabla-datos tabla-variabilidad" id="tablaEventos">
+                    <thead>
+                        <tr>
+                            <th>Semáforo</th><th>Evento</th><th>Entradas por semana</th>
+                            <th class="derecha">μ</th><th class="derecha">σ</th><th class="derecha">CV</th><th class="derecha">IQR</th>
+                            <th class="derecha">Precios (S/)</th><th class="derecha">CV precio</th><th class="derecha">Ocupación</th><th>Decisión sugerida</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in Model.Eventos)
+                        {
+                            <tr data-semaforo="@e.Semaforo">
+                                <td class="semaforo semaforo-@e.Semaforo.ToString().ToLowerInvariant()">@Icono(e.Semaforo) @Texto(e.Semaforo)</td>
+                                <td><strong>@e.Evento</strong>@(e.Atipico ? " ⚡" : "")<br /><span class="texto-tenue">@e.Categoria · @e.Fecha.ToString("dd/MM/yyyy")</span></td>
+                                <td class="num serie">@string.Join(" · ", e.Semanas)</td>
+                                <td class="derecha num">@Num(e.Ventas.Media)</td>
+                                <td class="derecha num">@Num(e.Ventas.Desviacion)</td>
+                                <td class="derecha num">@Pct(e.Ventas.Cv)</td>
+                                <td class="derecha num">@Num(e.Ventas.Iqr)</td>
+                                <td class="derecha num">@(e.PrecioMin == e.PrecioMax ? Num((double)e.PrecioMin) : $"{Num((double)e.PrecioMin)}–{Num((double)e.PrecioMax)}")</td>
+                                <td class="derecha num">@Pct(e.Precios.Cv)</td>
+                                <td class="derecha num">@Ocup(e.Ocupacion)</td>
+                                <td class="decision">@e.Decision</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (Model.Eventos.Any(e => e.Atipico))
+            {
+                <p class="texto-tenue">⚡ Ventas atípicas: más entradas en el período que Q3 + 1,5 × IQR del conjunto de eventos.</p>
+            }
+        </section>
+
+        <section class="tarjeta-panel">
+            <h2>Por categoría</h2>
+            <div class="tabla-contenedor">
+                <table class="tabla-datos" id="tablaCategorias">
+                    <thead>
+                        <tr>
+                            <th>Categoría</th><th class="derecha">Eventos</th><th class="derecha">Entradas</th>
+                            <th class="derecha">μ semanal</th><th class="derecha">σ</th><th class="derecha">CV ventas</th>
+                            <th class="derecha">Precio medio</th><th class="derecha">CV precio</th>
+                            <th class="derecha">Gasto medio por compra</th><th class="derecha">CV gasto</th><th class="derecha">IQR gasto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.Categorias)
+                        {
+                            <tr>
+                                <td>@c.Categoria</td>
+                                <td class="derecha num">@c.Eventos</td>
+                                <td class="derecha num">@c.Entradas</td>
+                                <td class="derecha num">@Num(c.VentasSemanales.Media)</td>
+                                <td class="derecha num">@Num(c.VentasSemanales.Desviacion)</td>
+                                <td class="derecha num">@Pct(c.VentasSemanales.Cv)</td>
+                                <td class="derecha num">S/ @Num(c.PrecioPagado.Media)</td>
+                                <td class="derecha num">@Pct(c.PrecioPagado.Cv)</td>
+                                <td class="derecha num">S/ @Num(c.GastoPorCompra.Media)</td>
+                                <td class="derecha num">@Pct(c.GastoPorCompra.Cv)</td>
+                                <td class="derecha num">@Num(c.GastoPorCompra.Iqr)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="tarjeta-panel">
+            <h2>Clientes con gasto atípico</h2>
+            <p class="texto-tenue">
+                Gasto por cliente en el período: μ S/ @Num(Model.GastoPorCliente.Media) · Q1 S/ @Num(Model.GastoPorCliente.Q1) · Q3 S/ @Num(Model.GastoPorCliente.Q3) · IQR S/ @Num(Model.GastoPorCliente.Iqr).
+                Atípico: gasto mayor que Q3 + 1,5 × IQR = S/ @Num(Model.GastoPorCliente.LimiteAtipico).
+            </p>
+            @if (Model.ClientesAtipicos.Count == 0)
+            {
+                <p class="texto-tenue">Ningún cliente supera ese límite.</p>
+            }
+            else
+            {
+                <table class="tabla-datos" id="tablaAtipicos">
+                    <thead><tr><th>Cliente</th><th class="derecha">Gasto</th><th class="derecha">Compras</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var c in Model.ClientesAtipicos)
+                        {
+                            <tr>
+                                <td class="num">Cliente @c.Codigo</td>
+                                <td class="derecha num">@Formato.Monto(c.Gasto)</td>
+                                <td class="derecha num">@c.Compras</td>
+                                <td><a asp-action="Cliente" asp-route-id="@c.UsuarioId" class="enlace-detalle">Ver ficha →</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script type="application/json" id="datosVariabilidad">@Html.Raw(datosGrafico)</script>
+    <partial name="_ChartJs" />
+    <script src="~/js/variabilidad.js" asp-append-version="true"></script>
+}

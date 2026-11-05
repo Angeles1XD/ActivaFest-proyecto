@@ -1,0 +1,72 @@
+@model Promocion
+@using ActivaFest.Services.Analitica
+@{
+    ViewData["Title"] = Model.Nombre;
+    var usados = Model.Cupones.Count(c => c.Usado);
+    var apartados = Model.Cupones.Count(c => !c.Usado && c.OrdenId != null);
+    var estado = !Model.Activa ? "Desactivada" : Model.Vigente(DateTime.Now) ? "Vigente" : DateTime.Now < Model.FechaInicio ? "Programada" : "Vencida";
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Promociones / @Model.Nombre</p>
+            <h1>@Model.Nombre <span class="badge-segmento">@estado</span></h1>
+            <p class="cat-subtitulo">@Model.Etiqueta · válido del @Model.FechaInicio.ToString("dd/MM/yyyy") al @Model.FechaFin.ToString("dd/MM/yyyy") · creada por @(Model.CreadaPor?.Email ?? "—")</p>
+        </div>
+        <div class="panel-acciones">
+            @if (Model.Activa)
+            {
+                <form asp-action="Desactivar" asp-route-id="@Model.Id" method="post">
+                    <button type="submit" class="btn-gris">⏸ Desactivar</button>
+                </form>
+            }
+            <a asp-action="Index" class="btn-gris enlace-boton">← Promociones</a>
+        </div>
+    </header>
+
+
+    <section class="fila-kpi" aria-label="Uso de la promoción">
+        <div class="kpi">
+            <span class="kpi-etiqueta">Cupones enviados</span>
+            <span class="kpi-valor" data-kpi="cupones">@Model.Cupones.Count</span>
+            <span class="kpi-nota">uno por cliente con consentimiento</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Usados</span>
+            <span class="kpi-valor" data-kpi="usados">@usados</span>
+            <span class="kpi-nota">@(Model.LimiteUsos != null ? $"límite: {Model.LimiteUsos}" : "sin límite adicional")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">En compras en curso</span>
+            <span class="kpi-valor" data-kpi="apartados">@apartados</span>
+            <span class="kpi-nota">apartados mientras se paga</span>
+        </div>
+    </section>
+    <p class="texto-tenue nota-reporte">Clientes elegidos con: @Model.CriterioSegmento</p>
+
+    <section class="tarjeta-panel">
+        <h2>Cupones</h2>
+        <div class="tabla-contenedor">
+            <table class="tabla-datos" id="tablaCupones">
+                <thead><tr><th>Cliente</th><th>Código</th><th>Estado</th><th>Compra</th></tr></thead>
+                <tbody>
+                    @foreach (var c in Model.Cupones.OrderByDescending(c => c.Usado).ThenBy(c => c.Codigo))
+                    {
+                        <tr>
+                            <td class="num">Cliente @ClienteAnalitica.CodigoDe(c.UsuarioId)</td>
+                            <td class="num">@c.Codigo</td>
+                            <td>@(c.Usado ? $"Usado el {c.FechaUso?.ToLocalTime():dd/MM/yyyy}" : c.OrdenId != null ? "En una compra en curso" : "Disponible")</td>
+                            <td class="num">@(c.Orden?.Codigo ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

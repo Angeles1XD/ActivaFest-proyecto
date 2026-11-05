@@ -1,0 +1,92 @@
+@model ActivaFest.Services.Acceso.DetalleReputacion
+@using ActivaFest.Services.Acceso
+@{
+    ViewData["Title"] = "Reputación del personal";
+    var r = Model.Reputacion;
+    var maximo = Math.Max(1, Model.Distribucion.Max());
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-solicitud">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Solicitudes / Reputación</p>
+            <h1>@Model.Usuario.NombreCompleto</h1>
+            <p class="cat-subtitulo">@Model.Usuario.Email · @(Model.Usuario.Activo ? "cuenta activa" : "cuenta desactivada")</p>
+        </div>
+        <a asp-action="Index" class="btn-gris enlace-boton">← Solicitudes</a>
+    </header>
+
+    <div class="solicitud-columnas">
+        <section class="tarjeta-panel" aria-labelledby="tituloResumen">
+            <h2 id="tituloResumen">Calificaciones de los asistentes</h2>
+            @if (r.MalaFama)
+            {
+                <p class="chip-alerta" data-dato="mala-fama">⚠️ Mala reputación: el sistema no la habilita automáticamente. Tú decides si la apruebas.</p>
+            }
+            <p class="reputacion-grande" data-dato="resumen">@r.Resumen</p>
+            <ul class="distribucion-estrellas">
+                @for (var p = 5; p >= 1; p--)
+                {
+                    var cantidad = Model.Distribucion[p - 1];
+                    <li>
+                        <span>@p ★</span>
+                        <span class="barra"><span style="width:@(cantidad * 100 / maximo)%"></span></span>
+                        <span>@cantidad</span>
+                    </li>
+                }
+            </ul>
+            <p class="texto-suave">
+                Entradas que validó: <b>@Model.EntradasValidadas</b>.
+                Regla automática: con @ReputacionPersonalService.MinimoCalificaciones o más calificaciones, promedio menor a
+                @ReputacionPersonalService.PromedioMinimo.ToString("0.0") o @ReputacionPersonalService.PorcentajeMaximoReportes % o más de reportes (1–2 ★) = mala reputación.
+            </p>
+        </section>
+
+        <section class="tarjeta-panel" aria-labelledby="tituloEventos">
+            <h2 id="tituloEventos">Eventos que controló</h2>
+            @if (Model.Eventos.Count == 0)
+            {
+                <p class="texto-suave">Todavía no fue asignada a ningún evento.</p>
+            }
+            else
+            {
+                <ul class="lista-solicitudes">
+                    @foreach (var e in Model.Eventos)
+                    {
+                        <li>@e.Evento · <span class="texto-tenue">@e.Fecha.ToString("dd/MM/yyyy")</span> · @(e.Activa ? "🟢 asignada" : "🏁 terminó")</li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+
+    <section class="tarjeta-panel" aria-labelledby="tituloComentarios">
+        <h2 id="tituloComentarios">Últimas opiniones</h2>
+        <p class="texto-suave">Se muestran sin datos de quien calificó.</p>
+        @if (Model.Recientes.Count == 0)
+        {
+            <p class="texto-suave">Sin opiniones todavía.</p>
+        }
+        else
+        {
+            <ul class="lista-solicitudes">
+                @foreach (var c in Model.Recientes)
+                {
+                    <li class="@(c.EsReporte ? "opinion-reporte" : "")">
+                        <b>@(new string('★', c.Puntaje))@(new string('☆', 5 - c.Puntaje))</b>
+                        <span class="texto-tenue">· @c.Evento?.Titulo · @c.Fecha.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                        @if (!string.IsNullOrEmpty(c.Comentario))
+                        {
+                            <div>“@c.Comentario”</div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>

@@ -1,0 +1,177 @@
+@model ActivaFest.Services.Organizadores.SolicitudOrganizadorInput
+@using ActivaFest.Services.Organizadores
+@{
+    ViewData["Title"] = "Organiza tu evento";
+    var ultima = ViewBag.Ultima as SolicitudOrganizador;
+    var autenticado = User.Identity?.IsAuthenticated == true;
+    // El administrador ya puede crear eventos y pedir personal: no necesita enviar la solicitud
+    var esOrganizador = User.IsInRole(Roles.Organizador) || User.IsInRole(Roles.Administrador);
+    var pendiente = ultima?.Estado == EstadoSolicitud.Pendiente;
+    var puedeSolicitar = autenticado && !esOrganizador && !pendiente;
+    string Fecha(DateTime d) => d.ToLocalTime().ToString("dd/MM/yyyy");
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-solicitud">
+    <header class="cat-encabezado">
+        <p class="cat-migas">Activa-Fest / Organiza tu evento</p>
+        <h1>Organiza tu <span class="degradado">evento</span></h1>
+        <p class="cat-subtitulo">
+            Para cuidar a quienes compran entradas, las cuentas no pueden crear eventos por sí solas: primero solicitas que habiliten tu cuenta como organizador y el equipo revisa tus datos.
+        </p>
+    </header>
+
+    <div class="solicitud-columnas">
+        <!-- Requisitos -->
+        <section class="tarjeta-panel" aria-labelledby="tituloRequisitos">
+            <h2 id="tituloRequisitos">📋 Requisitos</h2>
+            <ol class="lista-requisitos">
+                @foreach (var r in SolicitudOrganizadorService.Requisitos)
+                {
+                    <li>@r</li>
+                }
+            </ol>
+            <h3>Condiciones del organizador</h3>
+            <ul class="lista-requisitos">
+                @foreach (var c in SolicitudOrganizadorService.Condiciones)
+                {
+                    <li>@c</li>
+                }
+            </ul>
+            <p class="texto-suave">¿Dudas? Escríbenos desde <a asp-controller="Contacto" asp-action="Index">Contacto</a>.</p>
+        </section>
+
+        <!-- Estado o formulario -->
+        <section class="tarjeta-panel" aria-labelledby="tituloSolicitud">
+            @if (!autenticado)
+            {
+                <h2 id="tituloSolicitud">Primero, tu cuenta</h2>
+                <p>Crea una cuenta de usuario (es gratis) o inicia sesión, y vuelve a esta página para enviar tu solicitud.</p>
+                <div class="panel-acciones">
+                    <a asp-controller="Auth" asp-action="Registro" class="btn-rosa enlace-boton">Crear cuenta</a>
+                    <a asp-controller="Auth" asp-action="Login" asp-route-returnUrl="/Organizador/Solicitar" class="btn-gris enlace-boton">Iniciar sesión</a>
+                </div>
+            }
+            else if (esOrganizador)
+            {
+                <h2 id="tituloSolicitud">✅ Tu cuenta ya es organizadora</h2>
+                @if (ultima?.HabilitadoHasta is DateTime hasta)
+                {
+                    <p>Puedes crear eventos hasta el <b>@Fecha(hasta)</b>. Para seguir después de esa fecha, envía una nueva solicitud cuando venza.</p>
+                }
+                else
+                {
+                    <p>Puedes crear eventos sin fecha de vencimiento.</p>
+                }
+                <div class="panel-acciones">
+                    <a asp-controller="Eventos" asp-action="Crear" class="btn-rosa enlace-boton">＋ Crear evento</a>
+                    <a asp-controller="Personal" asp-action="Index" class="btn-gris enlace-boton">🚪 Solicitar personal de control</a>
+                </div>
+            }
+            else
+            {
+                @if (ultima != null)
+                {
+                    <div class="estado-solicitud estado-@ultima.Estado.ToString().ToLowerInvariant()" data-dato="estado-solicitud">
+                        @switch (ultima.Estado)
+                        {
+                            case EstadoSolicitud.Pendiente:
+                                <p>⏳ <b>Solicitud en revisión</b> desde el @Fecha(ultima.FechaSolicitud). Te avisaremos por correo cuando el equipo la revise.</p>
+                                break;
+                            case EstadoSolicitud.Rechazada:
+                                <p>❌ <b>Tu solicitud del @Fecha(ultima.FechaSolicitud) no fue aprobada.</b></p>
+                                <p>Motivo: @ultima.MotivoRechazo</p>
+                                <p>Corrige los datos y vuelve a enviarla.</p>
+                                break;
+                            default:
+                                <p>⌛ Tu periodo anterior como organizador terminó. Puedes volver a solicitarlo.</p>
+                                break;
+                        }
+                    </div>
+                }
+
+                @if (puedeSolicitar)
+                {
+                    <h2 id="tituloSolicitud">Enviar solicitud</h2>
+                    <form asp-action="Solicitar" method="post" class="form-solicitud">
+                        <div asp-validation-summary="ModelOnly" class="validacion"></div>
+
+                        <fieldset class="campo">
+                            <legend>¿Quién organiza?</legend>
+                            <label class="opcion"><input type="radio" asp-for="Tipo" value="@TipoOrganizador.PersonaNatural" /> Persona natural (DNI)</label>
+                            <label class="opcion"><input type="radio" asp-for="Tipo" value="@TipoOrganizador.Empresa" /> Empresa o asociación (RUC)</label>
+                        </fieldset>
+                        <div class="campo">
+                            <label asp-for="NombreOrganizador"></label>
+                            <input asp-for="NombreOrganizador" maxlength="150" />
+                            <span asp-validation-for="NombreOrganizador" class="text-danger"></span>
+                        </div>
+                        <div class="campo-doble">
+                            <div class="campo">
+                                <label asp-for="Documento"></label>
+                                <input asp-for="Documento" inputmode="numeric" maxlength="11" placeholder="8 u 11 dígitos" />
+                                <span asp-validation-for="Documento" class="text-danger"></span>
+                            </div>
+                            <div class="campo">
+                                <label asp-for="Telefono"></label>
+                                <input asp-for="Telefono" inputmode="tel" maxlength="20" placeholder="987 654 321" />
+                                <span asp-validation-for="Telefono" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="campo">
+                            <label asp-for="DescripcionEventos"></label>
+                            <textarea asp-for="DescripcionEventos" rows="4" maxlength="1000" placeholder="Ej.: Conciertos de rock para jóvenes en Arequipa, de 300 a 1000 personas, en locales como el Parque Selva Alegre."></textarea>
+                            <span asp-validation-for="DescripcionEventos" class="text-danger"></span>
+                        </div>
+                        <div class="campo">
+                            <label asp-for="WebORedes"></label>
+                            <input asp-for="WebORedes" maxlength="300" placeholder="https://facebook.com/mi-productora" />
+                        </div>
+                        <div class="campo">
+                            <label asp-for="PlazoSolicitado"></label>
+                            <select asp-for="PlazoSolicitado">
+                                <option value="@PlazoOrganizador.Dias30">30 días (un evento puntual)</option>
+                                <option value="@PlazoOrganizador.Dias90">90 días</option>
+                                <option value="@PlazoOrganizador.Dias180">180 días</option>
+                                <option value="@PlazoOrganizador.Indefinido">Indefinido (organizo eventos seguido)</option>
+                            </select>
+                        </div>
+                        <label class="campo-check">
+                            <input type="checkbox" name="AceptaCondiciones" value="true" required />
+                            <span>Acepto las condiciones del organizador.</span>
+                        </label>
+                        <button type="submit" class="btn-rosa">Enviar solicitud</button>
+                    </form>
+                }
+            }
+        </section>
+    </div>
+
+    @* HU34: alcance de los eventos gratuitos publicados, para animar a más organizadores *@
+    @if (ViewBag.Gratuitos is ActivaFest.Services.Eventos.ResumenGratuitos alcance)
+    {
+        var tramos = (IReadOnlyList<TramoTarifa>)ViewBag.Tramos;
+        int? desde = 1;
+        <section class="tarjeta-panel alcance-gratuitos" aria-labelledby="tituloAlcance" data-dato="alcance-gratuitos">
+            <h2 id="tituloAlcance">🎉 ¿Tu evento es gratuito? Publícalo aquí</h2>
+            <p>Los eventos de entrada libre no venden entradas: el público marca «Me interesa» y tú ves cuánta gente atraes.</p>
+            <div class="fila-kpi">
+                <div class="kpi"><span class="kpi-etiqueta">Eventos gratuitos publicados</span><span class="kpi-valor">@alcance.Eventos.ToString("N0")</span></div>
+                <div class="kpi"><span class="kpi-etiqueta">Visitas que recibieron</span><span class="kpi-valor">@alcance.Visitas.ToString("N0")</span></div>
+                <div class="kpi"><span class="kpi-etiqueta">Personas interesadas</span><span class="kpi-valor">@alcance.Interesados.ToString("N0")</span></div>
+            </div>
+            <p class="texto-suave">
+                Se paga una sola vez por publicar, según el aforo:
+                @foreach (var t in tramos)
+                {
+                    <span class="chip-tarifa">@(t.HastaAforo is int hasta ? $"hasta {hasta:N0} personas" : $"más de {(desde - 1):N0}"): @(t.Tarifa == 0 ? "gratis" : Formato.Monto(t.Tarifa))</span>
+                    desde = t.HastaAforo + 1;
+                }
+            </p>
+        </section>
+    }
+</div>

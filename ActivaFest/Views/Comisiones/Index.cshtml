@@ -1,0 +1,173 @@
+@model ActivaFest.Services.Comisiones.ReporteComisiones
+@{
+    ViewData["Title"] = "Comisiones y liquidaciones";
+    var liquidaciones = (List<Liquidacion>)ViewBag.Liquidaciones;
+    var desde = Model.Desde?.ToString("yyyy-MM-dd");
+    var hasta = Model.Hasta?.ToString("yyyy-MM-dd");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración</p>
+            <h1>Comisiones y <span class="degradado">liquidaciones</span></h1>
+            <p class="cat-subtitulo">Comisión por entrada vendida, ingresos por publicidad y saldo a pagar a cada organizador.</p>
+        </div>
+        <a asp-controller="Admin" asp-action="Index" class="btn-gris enlace-boton">← Moderación</a>
+    </header>
+
+    <!-- Filtro por fecha de pago -->
+    <form method="get" class="filtros filtros-reporte">
+        <div class="filtro">
+            <label for="desde">Pagos desde</label>
+            <input id="desde" name="desde" type="date" value="@desde" />
+        </div>
+        <div class="filtro">
+            <label for="hasta">Hasta</label>
+            <input id="hasta" name="hasta" type="date" value="@hasta" />
+        </div>
+        <div class="filtro-acciones">
+            <button type="submit" class="btn-rosa">Filtrar</button>
+            <a asp-action="Exportar" asp-route-desde="@desde" asp-route-hasta="@hasta" class="btn-gris enlace-boton">⬇ Exportar CSV</a>
+        </div>
+    </form>
+
+    <!-- Indicadores -->
+    <section class="fila-kpi" aria-label="Resumen de comisiones">
+        <div class="kpi kpi-hero">
+            <span class="kpi-etiqueta">Ingresos de la plataforma</span>
+            <span class="kpi-valor">@Formato.Monto(Model.IngresosPlataforma)</span>
+            <span class="kpi-nota">Comisiones @Formato.Monto(Model.Comisiones) + publicidad @Formato.Monto(Model.IngresosPublicidad)</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Ventas brutas</span>
+            <span class="kpi-valor">@Formato.Monto(Model.Bruto)</span>
+            <span class="kpi-nota">@Model.Eventos.Sum(e => e.Ordenes) compras</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Publicidad</span>
+            <span class="kpi-valor">@Formato.Monto(Model.IngresosPublicidad)</span>
+            <span class="kpi-nota">@Model.ContratosPublicidad @(Model.ContratosPublicidad == 1 ? "paquete" : "paquetes")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-etiqueta">Saldo por liquidar</span>
+            <span class="kpi-valor">@Formato.Monto(Model.SaldoPorLiquidar)</span>
+            <span class="kpi-nota">a organizadores, al día de hoy</span>
+        </div>
+    </section>
+    <p class="texto-tenue nota-reporte">
+        Ventas, comisión y publicidad corresponden a pagos @(desde == null && hasta == null ? "de todo el historial" : "del periodo filtrado").
+        El neto acumulado, lo liquidado y el saldo son siempre al día de hoy. La comisión de cada venta quedó fijada al confirmarse el pago.
+    </p>
+
+    <!-- Detalle por evento -->
+    <section class="tarjeta-panel">
+        <h2>Por evento</h2>
+        @if (Model.Eventos.Count == 0)
+        {
+            <p class="texto-tenue">No hay ventas en este periodo ni saldos pendientes.</p>
+        }
+        else
+        {
+            <div class="tabla-contenedor">
+                <table class="tabla-datos">
+                    <thead>
+                        <tr>
+                            <th>Evento / organizador</th>
+                            <th class="derecha">Entradas</th>
+                            <th class="derecha">Ventas</th>
+                            <th class="derecha">% comisión</th>
+                            <th class="derecha">Comisión</th>
+                            <th class="derecha">Neto</th>
+                            <th class="derecha">Liquidado</th>
+                            <th class="derecha">Saldo</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var f in Model.Eventos)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@f.Evento</strong><br />
+                                    <span class="texto-tenue">@f.Organizador · @f.CorreoOrganizador · @f.FechaEvento.ToString("dd/MM/yyyy")</span>
+                                </td>
+                                <td class="derecha num">@f.EntradasVendidas</td>
+                                <td class="derecha num">@Formato.Monto(f.Bruto)</td>
+                                <td class="derecha num">@f.PorcentajeComision.ToString("0.##") %</td>
+                                <td class="derecha num">@Formato.Monto(f.Comision)</td>
+                                <td class="derecha num">@Formato.Monto(f.Neto)</td>
+                                <td class="derecha num">@Formato.Monto(f.Liquidado)</td>
+                                <td class="derecha num"><strong>@Formato.Monto(f.Saldo)</strong></td>
+                                <td class="derecha">
+                                    @if (f.Saldo > 0.009m)
+                                    {
+                                        <details class="liquidar">
+                                            <summary>Registrar pago</summary>
+                                            <form asp-action="Liquidar" method="post" class="form-liquidar">
+                                                <input type="hidden" name="eventoId" value="@f.EventoId" />
+                                                <input type="hidden" name="desde" value="@desde" />
+                                                <input type="hidden" name="hasta" value="@hasta" />
+                                                <label>Monto (S/)
+                                                    <input name="monto" type="number" step="0.01" min="0.01" max="@f.Saldo.ToString("0.00", inv)"
+                                                           value="@f.Saldo.ToString("0.00", inv)" required />
+                                                </label>
+                                                <label>N.° de operación
+                                                    <input name="referencia" maxlength="100" required placeholder="Transferencia 000123" />
+                                                </label>
+                                                <label>Nota (opcional)
+                                                    <input name="nota" maxlength="300" />
+                                                </label>
+                                                <button type="submit" class="btn-rosa">Registrar</button>
+                                            </form>
+                                        </details>
+                                    }
+                                    else
+                                    {
+                                        <span class="chip-estado chip-Aprobado">Al día</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <!-- Registro auditable -->
+    <section class="tarjeta-panel">
+        <h2>Últimas liquidaciones</h2>
+        @if (liquidaciones.Count == 0)
+        {
+            <p class="texto-tenue">Todavía no se registraron pagos a organizadores.</p>
+        }
+        else
+        {
+            <div class="tabla-contenedor">
+                <table class="tabla-datos">
+                    <thead><tr><th>Fecha</th><th>Organizador</th><th>Evento</th><th class="derecha">Monto</th><th>Operación</th><th>Nota</th></tr></thead>
+                    <tbody>
+                        @foreach (var l in liquidaciones)
+                        {
+                            <tr>
+                                <td class="num">@ActivaFest.Services.Panel.PanelService.AHoraPeru(l.Fecha).ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@l.Organizador?.NombreCompleto</td>
+                                <td>@l.Evento?.Titulo</td>
+                                <td class="derecha num">@Formato.Monto(l.Monto)</td>
+                                <td class="num">@l.Referencia</td>
+                                <td class="texto-tenue">@l.Nota</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

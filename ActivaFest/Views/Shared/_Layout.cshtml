@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="theme-color" content="#0a0a12"/>
+    <title>@ViewData["Title"] - ActivaFest</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap"/>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/plano.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/catalogo.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/categorias.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/asistente-voz.css" asp-append-version="true"/>
+    @await RenderSectionAsync("Styles", required: false)
+    <link rel="stylesheet" href="~/css/tema-vivo.css" asp-append-version="true"/>
+</head>
+@{
+    var controlador = ViewContext.RouteData.Values["controller"]?.ToString();
+    var accion = ViewContext.RouteData.Values["action"]?.ToString();
+    string Activo(string c, string? a = null) => controlador == c && (a == null || accion == a) ? "activo" : "";
+    var autenticado = User.Identity?.IsAuthenticated == true;
+
+    // Paleta de colores según el participante (ver tema-vivo.css)
+    var (temaRol, nombreRol) = User.IsInRole(ActivaFest.Models.Roles.Administrador) ? ("admin", "Admin")
+        : User.IsInRole(ActivaFest.Models.Roles.Organizador) ? ("organizador", "Organizador")
+        : User.IsInRole(ActivaFest.Models.Roles.ControlAcceso) ? ("acceso", "Puerta")
+        : autenticado ? ("usuario", (string?)null) : ("visitante", (string?)null);
+}
+<body class="tema-@temaRol">
+
+<!-- Fondo animado: aurora de colores que se mueve lentamente -->
+<div class="fondo" aria-hidden="true">
+    <span class="fondo-orbe orbe-1"></span>
+    <span class="fondo-orbe orbe-2"></span>
+    <span class="fondo-orbe orbe-3"></span>
+    <span class="fondo-orbe orbe-4"></span>
+    <span class="fondo-malla"></span>
+</div>
+
+<!-- 🔝 NAVBAR -->
+<header class="cabecera">
+    <nav class="nav" aria-label="Principal">
+        <a asp-controller="Home" asp-action="Index" class="marca">
+            <span class="marca-icono" aria-hidden="true">A</span>
+            <span class="marca-texto">ACTIVA-FEST</span>
+        </a>
+
+        <button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">
+            <span></span><span></span><span></span>
+        </button>
+
+        <div class="nav-menu" id="navMenu">
+            <div class="nav-links">
+                <a asp-controller="Home" asp-action="Index" class="@Activo("Home")">Inicio</a>
+                <a asp-controller="Eventos" asp-action="Index" class="@Activo("Eventos", "Index")@Activo("Eventos", "Detalle")">Eventos</a>
+                <a asp-controller="Categorias" asp-action="Index" class="@Activo("Categorias")">Categorías</a>
+
+                @if (autenticado)
+                {
+                    <a asp-controller="Entradas" asp-action="Index" class="@Activo("Entradas")@Activo("Compras")">Mis entradas</a>
+                    var enCarrito = await Context.RequestServices.GetRequiredService<ActivaFest.Services.Compras.ICarritoService>()
+                        .ContarAsync(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+                    <a asp-controller="Carrito" asp-action="Index" class="nav-carrito @Activo("Carrito")"><span>🛒 Carrito</span>@if (enCarrito > 0) {<span class="nav-carrito-contador" aria-label="@enCarrito reservas por pagar">@enCarrito</span>}</a>
+                    @if (User.IsInRole(ActivaFest.Models.Roles.Organizador) || User.IsInRole(ActivaFest.Models.Roles.Administrador))
+                    {
+                        <a asp-controller="Eventos" asp-action="MisEventos" class="@Activo("Eventos", "MisEventos")@Activo("Eventos", "Crear")@Activo("Eventos", "Editar")">Mis eventos</a>
+                        <a asp-controller="Panel" asp-action="Index" class="@Activo("Panel")">Panel</a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Organizador" asp-action="Solicitar" class="@Activo("Organizador")">Organiza tu evento</a>
+                    }
+                    @if (User.IsInRole(ActivaFest.Models.Roles.ControlAcceso))
+                    {
+                        <a asp-controller="Acceso" asp-action="Index" class="@Activo("Acceso")">Puerta</a>
+                    }
+                    @if (User.IsInRole(ActivaFest.Models.Roles.Administrador))
+                    {
+                        <a asp-controller="Admin" asp-action="Index" class="@Activo("Admin")@Activo("Usuarios")@Activo("Comisiones")@Activo("Paquetes")">Administración</a>
+                    }
+                }
+            </div>
+
+            <div class="nav-cuenta">
+                @if (autenticado)
+                {
+                    <!-- 🔔 Panel de notificaciones: recordatorios y avisos pedidos al asistente -->
+                    <div class="notif-campana" id="notifCampana">
+                        <button type="button" class="notif-boton @Activo("Notificaciones")" id="notifBoton" aria-haspopup="true" aria-expanded="false" aria-controls="notifPanel" aria-label="Notificaciones">
+                            <span aria-hidden="true">🔔</span>
+                            <span class="notif-contador" id="notifContador" hidden>0</span>
+                        </button>
+                        <div class="notif-panel" id="notifPanel" role="dialog" aria-label="Notificaciones" hidden>
+                            <div class="notif-panel-cab">
+                                <strong>Notificaciones</strong>
+                                <a asp-controller="Notificaciones" asp-action="Index">Ver todas</a>
+                            </div>
+                            <div class="notif-contenido" id="notifContenido">Cargando…</div>
+                        </div>
+                    </div>
+                    <a asp-controller="Perfil" asp-action="Index" class="nav-usuario @Activo("Perfil")" title="Mi perfil (@User.Identity!.Name)">
+                        <span class="avatar" aria-hidden="true">@(User.Identity.Name?.Substring(0, 1).ToUpperInvariant())</span>
+                        <span class="nav-usuario-correo">@User.Identity.Name</span>
+                    </a>
+                    @if (nombreRol != null)
+                    {
+                        <span class="nav-rol">@nombreRol</span>
+                    }
+                    <form asp-controller="Auth" asp-action="Logout" method="post">
+                        <button type="submit" class="boton-contorno">Salir</button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-controller="Auth" asp-action="Login" class="boton-contorno @Activo("Auth", "Login")">Iniciar sesión</a>
+                    <a asp-controller="Auth" asp-action="Registro" class="boton-degradado">Crear cuenta</a>
+                }
+            </div>
+        </div>
+    </nav>
+</header>
+
+<!-- CONTENIDO -->
+<main class="main-content">
+    @* Dato guardado en la sesión al crear un evento (uso de sesiones del proyecto) *@
+    @if (Context.Session.GetString("UltimoEvento") is string ultimoEvento && Activo("Eventos", "MisEventos") != "")
+    {
+        <div class="alerta alerta-info"><span aria-hidden="true">i</span> Último evento creado en esta sesión: <b>@ultimoEvento</b></div>
+    }
+    @if (TempData["Mensaje"] is string mensaje)
+    {
+        <div class="alerta alerta-ok" role="status"><span aria-hidden="true">✓</span> @mensaje</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alerta alerta-error" role="alert"><span aria-hidden="true">!</span> @error</div>
+    }
+    @RenderBody()
+</main>
+
+<!-- FOOTER -->
+<footer class="pie">
+    <div class="pie-contenido">
+        <a asp-controller="Home" asp-action="Index" class="marca marca-chica">
+            <span class="marca-icono" aria-hidden="true">A</span>
+            <span class="marca-texto">ACTIVA-FEST</span>
+        </a>
+        <p>Vive el evento. Vive el momento.</p>
+        <nav class="pie-links" aria-label="Pie de página">
+            <a asp-controller="Eventos" asp-action="Index">Eventos</a>
+            <a asp-controller="Categorias" asp-action="Index">Categorías</a>
+            <a asp-controller="Organizador" asp-action="Solicitar">Organiza tu evento</a>
+            <a asp-controller="Contacto" asp-action="Index">Contacto</a>
+            <a asp-controller="Home" asp-action="Privacy">Privacidad</a>
+        </nav>
+        <p class="pie-copy">© 2026 ActivaFest · Plataforma de eventos</p>
+    </div>
+</footer>
+
+<!-- 🤖 ASISTENTE VIRTUAL -->
+@{
+    // La bienvenida del asistente cambia según el rol (las funciones se validan igual en el servidor)
+    var rolChat = User.IsInRole(ActivaFest.Models.Roles.Administrador) ? "admin"
+        : User.IsInRole(ActivaFest.Models.Roles.Organizador) ? "organizador"
+        : User.IsInRole(ActivaFest.Models.Roles.ControlAcceso) ? "acceso"
+        : User.Identity?.IsAuthenticated == true ? "usuario" : "visitante";
+}
+<div id="chat-widget" data-rol="@rolChat">
+    <div id="chat-window" role="dialog" aria-label="Asistente ActivaFest">
+        <div id="chat-header">
+            <span><span class="chat-punto" aria-hidden="true"></span> Asistente ActivaFest</span>
+            <button type="button" id="chat-cerrar" aria-label="Cerrar chat">✕</button>
+        </div>
+        <div id="chat-messages" aria-live="polite"></div>
+        <div class="typing-indicator" id="chat-typing">Escribiendo...</div>
+        <form id="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Pregunta sobre eventos..." autocomplete="off" aria-label="Escribe tu pregunta"/>
+            <button type="button" id="chat-voz" aria-label="Preguntar por voz" title="Preguntar por voz" hidden>🎤</button>
+            <button type="submit" id="chat-send">Enviar</button>
+        </form>
+    </div>
+    <button type="button" id="chat-toggle" aria-label="Abrir asistente virtual">💬</button>
+</div>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/ia-respuesta.js" asp-append-version="true"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@if (autenticado)
+{
+    <script src="~/js/notificaciones.js" asp-append-version="true"></script>
+}
+<script src="~/js/voz-natural.js" asp-append-version="true"></script>
+<script src="~/js/asistente-voz.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

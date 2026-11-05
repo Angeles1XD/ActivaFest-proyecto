@@ -1,0 +1,707 @@
+/* ============================= */
+/* SPRINT 2: CATÁLOGO, FICHA, MAPAS Y FORMULARIO DE EVENTO */
+/* ============================= */
+
+/* ============================= */
+/* UTILIDADES COMPARTIDAS */
+/* ============================= */
+.enlace-boton {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
+}
+
+.btn-bloque {
+  display: block;
+  width: 100%;
+  margin-top: 15px;
+}
+
+.btn-grande {
+  padding: 14px 30px;
+  font-size: 17px;
+}
+
+.btn-rosa:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.enlace-volver {
+  display: inline-block;
+  color: var(--lila);
+  text-decoration: none;
+  margin-bottom: 20px;
+}
+
+.sin-imagen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  font-size: 56px;
+  background: linear-gradient(135deg, #1f1535, var(--tarjeta));
+}
+
+.sin-imagen-grande {
+  min-height: 360px;
+  border-radius: 18px;
+  font-size: 90px;
+}
+
+.miniatura-evento {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+/* ============================= */
+/* CATÁLOGO: ENCABEZADO Y FILTROS (HU05) */
+/* ============================= */
+.catalogo-encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+  gap: 15px;
+  align-items: end;
+  background: var(--tarjeta);
+  padding: 20px;
+  border-radius: 16px;
+  margin: 25px 0 35px;
+}
+
+.filtro {
+  min-width: 0;
+}
+
+.filtro label {
+  display: block;
+  font-size: 13px;
+  color: var(--texto-2);
+  margin-bottom: 6px;
+}
+
+.filtro input,
+.filtro select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: white;
+  color-scheme: dark;
+}
+
+.filtro input:focus,
+.filtro select:focus {
+  outline: none;
+  box-shadow: 0 0 10px var(--morado);
+}
+
+.filtro-buscar {
+  grid-column: span 2;
+}
+
+.filtro-precio .rango {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filtro-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--texto-2);
+  padding-bottom: 10px;
+}
+
+.filtro-acciones {
+  display: flex;
+  gap: 10px;
+}
+
+.filtro-acciones > * {
+  flex: 1;
+}
+
+.vacio {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--texto-2);
+}
+
+.vacio p {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+/* ============================= */
+/* CATÁLOGO: TARJETAS (HU02) */
+/* ============================= */
+.grid-catalogo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
+}
+
+.card-catalogo {
+  display: flex;
+  flex-direction: column;
+  background: var(--tarjeta);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: 0.3s;
+  animation: fadeInUp 0.7s ease;
+}
+
+.card-catalogo:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+}
+
+.card-imagen {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.card-imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s;
+}
+
+.card-catalogo:hover .card-imagen img {
+  transform: scale(1.05);
+}
+
+.card-categoria {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(5, 5, 16, 0.85);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+.card-categoria.estatica {
+  position: static;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.card-cuerpo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 18px;
+}
+
+.card-fecha {
+  color: var(--lila);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.card-titulo {
+  font-size: 19px;
+  margin-bottom: 8px;
+}
+
+.card-lugar {
+  color: var(--texto-2);
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.card-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  gap: 10px;
+}
+
+.card-precio {
+  font-weight: bold;
+  color: var(--lila);
+}
+
+.card-pie .btn-rosa {
+  white-space: nowrap;
+}
+
+/* ============================= */
+/* PAGINACIÓN */
+/* ============================= */
+.paginacion {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 40px;
+}
+
+.paginacion a,
+.paginacion span {
+  min-width: 40px;
+  padding: 8px 12px;
+  text-align: center;
+  border-radius: 10px;
+  background: var(--tarjeta);
+  color: var(--texto-2);
+  text-decoration: none;
+}
+
+.paginacion a:hover {
+  color: var(--morado);
+}
+
+.paginacion .actual {
+  background: var(--degradado);
+  color: white;
+  font-weight: bold;
+}
+
+/* ============================= */
+/* FICHA DEL EVENTO (HU03) */
+/* ============================= */
+.ficha {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 35px;
+  align-items: start;
+}
+
+.ficha-galeria .carousel {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.ficha-galeria .carousel-item img {
+  height: 420px;
+  object-fit: cover;
+}
+
+.ficha-datos {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  line-height: 2;
+}
+
+.ficha-precios {
+  background: var(--tarjeta);
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.ficha-precios h3,
+.ficha-seccion h3 {
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+.ficha-precios table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ficha-precios th,
+.ficha-precios td {
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--borde);
+  text-align: left;
+}
+
+.ficha-precios th {
+  color: var(--texto-2);
+  font-weight: normal;
+  font-size: 13px;
+}
+
+.ficha-precios .precio {
+  text-align: right;
+  font-weight: bold;
+  color: var(--lila);
+}
+
+.ficha-seccion {
+  margin-top: 40px;
+}
+
+.descripcion {
+  white-space: pre-line;
+  color: var(--texto-2);
+  line-height: 1.7;
+  max-width: 850px;
+}
+
+/* ============================= */
+/* MAPA Y RUTA (HU04) */
+/* ============================= */
+.mapa {
+  height: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.mapa-selector {
+  height: 360px;
+  cursor: crosshair;
+}
+
+.mapa .leaflet-popup-content {
+  color: #111;
+}
+
+.ruta-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* Si la librería del mapa no carga, se muestra la dirección en lugar de un recuadro vacío */
+.mapa.mapa-no-disponible {
+  height: auto;
+  padding: 24px;
+  border: 1px dashed var(--borde-fuerte);
+  color: var(--texto-2);
+}
+
+.ruta-info {
+  min-height: 22px;
+  color: var(--lila);
+  margin-bottom: 12px;
+}
+
+.ruta-info.error {
+  color: var(--error);
+}
+
+/* ============================= */
+/* FORMULARIO DE EVENTO */
+/* ============================= */
+.form-evento {
+  max-width: 900px;
+  margin-top: 25px;
+}
+
+.seccion-form {
+  background: var(--tarjeta);
+  border-radius: 16px;
+  padding: 25px;
+  margin-bottom: 25px;
+}
+
+.seccion-form legend {
+  float: none;
+  width: auto;
+  font-size: 18px;
+  color: var(--lila);
+  margin-bottom: 15px;
+}
+
+.campos-fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.campo input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+.campo-con-boton {
+  display: flex;
+  gap: 10px;
+}
+
+.campo-con-boton input {
+  flex: 1;
+}
+
+.campo-con-boton button {
+  white-space: nowrap;
+}
+
+.tipo-entrada {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.btn-quitar {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--error);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  cursor: pointer;
+}
+
+.btn-quitar:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.preview-fotos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.preview-fotos p {
+  grid-column: 1 / -1;
+}
+
+.preview-fotos figure {
+  margin: 0;
+}
+
+.preview-fotos img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.preview-fotos figcaption {
+  font-size: 12px;
+  color: var(--texto-2);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+@media (max-width: 900px) {
+  .ficha {
+    grid-template-columns: 1fr;
+  }
+
+  .ficha-galeria .carousel-item img {
+    height: 280px;
+  }
+}
+
+@media (max-width: 600px) {
+  .filtros {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .filtro-buscar {
+    grid-column: auto;
+  }
+
+  .grid-catalogo {
+    grid-template-columns: 1fr;
+  }
+
+  .campos-fila,
+  .tipo-entrada {
+    grid-template-columns: 1fr;
+  }
+
+  .tipo-entrada {
+    border-bottom: 1px solid var(--borde);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .campo-con-boton {
+    flex-direction: column;
+  }
+
+  .mapa {
+    height: 300px;
+  }
+}
+
+/* ============================= */
+/* SELECCIÓN DE ENTRADAS EN LA FICHA (SPRINT 3) */
+/* ============================= */
+.form-compra .col-cantidad {
+  text-align: right;
+  width: 90px;
+}
+
+/* Aforo disponible por zona (HU03) */
+.ficha-precios .col-disponibles {
+  text-align: center;
+  color: var(--texto-2);
+  white-space: nowrap;
+}
+
+.col-disponibles .quedan {
+  display: inline;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.aforo-disponible {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.aforo-disponible.agotado {
+  color: var(--error);
+}
+
+.selector-cantidad {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: white;
+  color-scheme: dark;
+}
+
+.quedan {
+  display: block;
+  font-size: 12px;
+  color: #fbbf24;
+}
+
+.agotado {
+  color: var(--error);
+  font-weight: bold;
+}
+
+.aviso-venta {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.total-compra {
+  display: flex;
+  justify-content: space-between;
+  margin: 18px 0 0;
+  font-size: 18px;
+}
+
+.nota-reserva {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* ============================= */
+/* EVENTOS PASADOS */
+/* ============================= */
+.badge-Finalizado {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--texto-2);
+  margin-left: 6px;
+}
+
+.evento-finalizado {
+  opacity: 0.7;
+}
+
+.aviso-vencido {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+  font-size: 14px;
+}
+
+/* ============================= */
+/* EDICIÓN DE EVENTOS (SPRINT 4) */
+/* ============================= */
+.foto-actual {
+  display: block;
+  margin: 0;
+  cursor: pointer;
+}
+
+.foto-actual img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.foto-actual span {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--texto-2);
+  margin-top: 4px;
+}
+
+.foto-actual:has(input:checked) img {
+  opacity: 0.3;
+  outline: 2px solid var(--morado);
+}
+
+.acciones-evento {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Filas de zonas: etiquetas alineadas arriba aunque una tenga la nota de vendidas */
+.tipo-entrada {
+  align-items: start;
+}
+
+.tipo-entrada .btn-quitar {
+  margin-top: 27px;
+}
+
+/* Título de la ficha en su propia línea, debajo de la categoría */
+.ficha-info .text-gradient {
+  display: block;
+}
+
+/* Mis eventos: cuadrícula de tarjetas con miniatura proporcionada */
+.grid-mis-eventos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 20px;
+}
+
+.grid-mis-eventos .miniatura-evento {
+  max-height: none;
+  aspect-ratio: 16 / 9;
+}
+
+.catalogo-encabezado.cat-encabezado {
+  margin-bottom: 26px;
+}
+
+/* ===== HU30: cupón en el formulario de compra ===== */
+.campo-cupon { display: grid; gap: 6px; margin: 14px 0 4px; }
+.campo-cupon label { font-weight: 600; font-size: 14px; }
+.campo-cupon input {
+  padding: 10px 12px; border-radius: 10px; border: 1px dashed rgba(255, 0, 110, 0.6);
+  background: rgba(255, 255, 255, 0.04); color: inherit; font: inherit; letter-spacing: 1px;
+}

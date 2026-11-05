@@ -1,0 +1,45 @@
+@model EventoCardViewModel
+
+<article class="ev-card" style="--c: @Formato.Color(Model.CategoriaColor)">
+    <a asp-controller="Eventos" asp-action="Detalle" asp-route-id="@Model.Id" class="ev-imagen" tabindex="-1" aria-hidden="true">
+        @if (Model.ImagenPortada != null)
+        {
+            <img src="@Model.ImagenPortada" alt="" loading="lazy" />
+        }
+        else
+        {
+            <span class="ev-sin-imagen">@Model.CategoriaIcono</span>
+        }
+        <span class="ev-chip">@Model.Categoria</span>
+        @if (Model.Destacado)
+        {
+            <span class="ev-destacado">⭐ Destacado</span>
+        }
+    </a>
+
+    <div class="ev-cuerpo">
+        <h3><a asp-controller="Eventos" asp-action="Detalle" asp-route-id="@Model.Id">@Model.Titulo</a></h3>
+
+        <p class="ev-dato">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" /><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            @Formato.Fecha(Model.Fecha, "ddd dd MMM · HH:mm")h
+        </p>
+        <p class="ev-dato">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="2" /><circle cx="12" cy="9.5" r="2.5" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+            @Model.Ubicacion
+            @if (Model.DistanciaKm != null)
+            {
+                <span class="ev-distancia">· @Model.DistanciaKm.Value.ToString(Model.DistanciaKm < 10 ? "0.0" : "0") km</span>
+            }
+        </p>
+        @if (Model.Motivo != null)
+        {
+            <p class="ev-motivo">✨ @Model.Motivo</p>
+        }
+
+        <div class="ev-pie">
+            <span class="ev-precio">@(Model.PrecioDesde switch { null => "Por confirmar", 0 => "Gratis", var p => Formato.Precio(p.Value) })</span>
+            <a asp-controller="Eventos" asp-action="Detalle" asp-route-id="@Model.Id" class="ev-boton">Ver más →</a>
+        </div>
+    </div>
+</article>

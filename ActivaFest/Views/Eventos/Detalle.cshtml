@@ -1,0 +1,391 @@
+@model Evento
+@using System.Security.Claims
+@inject Microsoft.Extensions.Options.IOptions<ActivaFest.Services.Compras.ComprasOptions> OpcionesCompras
+@inject ActivaFest.Services.Promociones.IPromocionService Promociones
+@{
+    ViewData["Title"] = Model.Titulo;
+    var imagenes = Model.Imagenes.OrderBy(i => i.Orden).ToList();
+    var tipos = Model.TiposEntrada.OrderBy(t => t.Precio).ToList();
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    // Un evento realizado o cancelado ya no tiene aforo "disponible"
+    var mostrarDisponibles = !Model.YaOcurrio(DateTime.Now) && Model.Estado != EstadoEvento.Cancelado;
+}
+
+@section Styles {
+    <partial name="_LeafletCss" />
+    <link rel="stylesheet" href="~/css/plano.css" asp-append-version="true" />
+}
+
+<!-- El asistente virtual usa este evento como contexto ("¿dónde es?", "¿cuánto cuesta?") -->
+<div id="chat-contexto" data-evento="@Model.Id" hidden></div>
+
+<a asp-action="Index" class="enlace-volver">← Volver al catálogo</a>
+
+<div class="ficha">
+    <!-- 📸 GALERÍA (HU03) -->
+    <section class="ficha-galeria">
+        @if (imagenes.Count > 0)
+        {
+            <div id="galeriaEvento" class="carousel slide" data-bs-ride="carousel">
+                @if (imagenes.Count > 1)
+                {
+                    <div class="carousel-indicators">
+                        @for (var i = 0; i < imagenes.Count; i++)
+                        {
+                            <button type="button" data-bs-target="#galeriaEvento" data-bs-slide-to="@i"
+                                    class="@(i == 0 ? "active" : "")" aria-current="@(i == 0 ? "true" : null)"
+                                    aria-label="Foto @(i + 1)"></button>
+                        }
+                    </div>
+                }
+                <div class="carousel-inner">
+                    @for (var i = 0; i < imagenes.Count; i++)
+                    {
+                        <div class="carousel-item @(i == 0 ? "active" : "")">
+                            <img src="@imagenes[i].Ruta" class="d-block w-100" alt="Foto @(i + 1) de @Model.Titulo"
+                                 loading="@(i == 0 ? "eager" : "lazy")" />
+                        </div>
+                    }
+                </div>
+                @if (imagenes.Count > 1)
+                {
+                    <button class="carousel-control-prev" type="button" data-bs-target="#galeriaEvento" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Anterior</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#galeriaEvento" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Siguiente</span>
+                    </button>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="sin-imagen sin-imagen-grande">@Model.Categoria?.Icono</div>
+        }
+    </section>
+
+    <!-- ℹ️ INFORMACIÓN -->
+    <section class="ficha-info">
+        @if (ViewBag.PuedeEditar == true && !Model.YaOcurrio(DateTime.Now) && Model.Estado != EstadoEvento.Cancelado)
+        {
+            <p class="acciones-evento">
+                <a asp-action="Editar" asp-route-id="@Model.Id" class="btn-gris enlace-boton">✏️ Editar evento</a>
+                @if (Model.Estado == EstadoEvento.Aprobado)
+                {
+                    <a asp-controller="Panel" asp-action="Evento" asp-route-id="@Model.Id" class="btn-gris enlace-boton">📊 Panel de ventas</a>
+                }
+            </p>
+        }
+        @if (Model.Estado != EstadoEvento.Aprobado)
+        {
+            <p><span class="badge-estado badge-@Model.Estado">@Model.Estado</span></p>
+            @if (Model.Estado == EstadoEvento.Cancelado)
+            {
+                <p class="aviso-vencido">🚫 Este evento fue cancelado. Motivo: @Model.MotivoCancelacion. Las entradas quedaron anuladas y el organizador gestionará la devolución.</p>
+            }
+        }
+        @if (Model.YaOcurrio(DateTime.Now))
+        {
+            <p class="aviso-vencido">Este evento ya se realizó.</p>
+        }
+
+        <span class="card-categoria estatica">@Model.Categoria?.Icono @Model.Categoria?.Nombre</span>
+        <h2 class="text-gradient">@Model.Titulo</h2>
+
+        <ul class="ficha-datos">
+            <li>📅 @Formato.Fecha(Model.Fecha, "dddd dd 'de' MMMM 'de' yyyy")</li>
+            <li>🕗 @Model.Fecha.ToString("HH:mm") horas</li>
+            <li>📍 @Model.Ubicacion</li>
+            @if (Model.Aforo > 0)
+            {
+                // HU03: aforo disponible = capacidad menos lo vendido y lo reservado en compras en curso
+                var disponibles = tipos.Sum(t => t.Disponibles);
+                <li>
+                    👥 Aforo: @Model.Aforo.ToString("N0") personas
+                    @if (Model.EsGratuito)
+                    {
+                        <span class="aforo-disponible">· 🎉 Entrada libre</span>
+                    }
+                    else if (mostrarDisponibles)
+                    {
+                        <span class="aforo-disponible @(disponibles == 0 ? "agotado" : "")">
+                            · @(disponibles == 0 ? "agotado" : $"{disponibles:N0} disponibles")
+                        </span>
+                    }
+                </li>
+            }
+        </ul>
+
+        @if (Model.EsGratuito)
+        {
+            // HU34: entrada libre: no se compra nada; el público marca «Me interesa»
+            var interesados = (int)(ViewBag.Interesados ?? 0);
+            var meInteresa = ViewBag.MeInteresa == true;
+            <div class="ficha-precios ficha-gratuita" id="interes" data-dato="entrada-libre">
+                <h3>🎉 Entrada libre</h3>
+                <p>Este evento es gratuito: <b>no necesitas comprar entrada</b>. El ingreso es por orden de llegada hasta completar el aforo, así que llega con anticipación.</p>
+                <p class="contador-interes" data-dato="interesados">⭐ <b>@interesados.ToString("N0")</b> @(interesados == 1 ? "persona está interesada" : "personas están interesadas")</p>
+                @if (Model.Estado == EstadoEvento.Aprobado && Model.Fecha > DateTime.Now)
+                {
+                    if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <form asp-action="MeInteresa" asp-route-id="@Model.Id" method="post">
+                            <button type="submit" class="@(meInteresa ? "btn-gris" : "btn-rosa") btn-bloque">@(meInteresa ? "✓ Te interesa (quitar)" : "⭐ Me interesa")</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@($"/Eventos/Detalle/{Model.Id}#interes")"
+                           class="btn-rosa btn-bloque enlace-boton">⭐ Inicia sesión para marcar «Me interesa»</a>
+                    }
+                    <p class="texto-suave">Así el organizador sabe cuánta gente espera y te recomendamos eventos parecidos.</p>
+                }
+            </div>
+        }
+        else
+        {
+        <!-- 💲 PRECIOS -->
+        <div class="ficha-precios">
+            <h3>Entradas</h3>
+            @if (tipos.Count == 0)
+            {
+                <p class="texto-suave">El organizador aún no publicó los precios.</p>
+            }
+            else
+            {
+                var enVenta = Model.Estado == EstadoEvento.Aprobado && Model.Fecha > DateTime.Now;
+                var agotado = tipos.All(t => t.Disponibles == 0);
+                // HU26: en teatro se eligen los asientos exactos en el plano; en el resto, zona y cantidad
+                var conAsientos = tipos.Any(t => t.AsientosNumerados);
+
+                <!-- 🛒 SELECCIÓN DE ENTRADAS (HU06) -->
+                <form asp-controller="Compras" asp-action="Iniciar" method="post" id="comprar" class="form-compra">
+                    <input type="hidden" name="eventoId" value="@Model.Id" />
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Zona</th><th>Precio</th>
+                                @if (mostrarDisponibles) { <th class="col-disponibles">Disponibles</th> }
+                                @if (enVenta) { <th class="col-cantidad">@(conAsientos ? "Elegidos" : "Cantidad")</th> }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in tipos)
+                            {
+                                <tr>
+                                    <td>@t.Nombre</td>
+                                    <td class="precio">@Formato.Precio(t.Precio)</td>
+                                    @if (mostrarDisponibles)
+                                    {
+                                        <td class="col-disponibles">
+                                            @if (t.Disponibles == 0)
+                                            {
+                                                <span class="agotado">Agotado</span>
+                                            }
+                                            else if (t.Disponibles <= 10)
+                                            {
+                                                <span class="quedan">¡Quedan @t.Disponibles!</span>
+                                            }
+                                            else
+                                            {
+                                                @t.Disponibles.ToString("N0")
+                                            }
+                                        </td>
+                                    }
+                                    @if (enVenta)
+                                    {
+                                        <td class="col-cantidad">
+                                            @if (t.Disponibles == 0)
+                                            {
+                                                <span class="agotado">Agotado</span>
+                                            }
+                                            else if (conAsientos)
+                                            {
+                                                <span class="contador-zona" data-zona="@t.Id" data-precio="@t.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)">0</span>
+                                            }
+                                            else
+                                            {
+                                                <select name="cantidades[@t.Id]" class="selector-cantidad"
+                                                        data-precio="@t.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                        aria-label="Cantidad de entradas @t.Nombre">
+                                                    @for (var n = 0; n <= Math.Min(10, t.Disponibles); n++)
+                                                    {
+                                                        <option value="@n">@n</option>
+                                                    }
+                                                </select>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    @if (!enVenta)
+                    {
+                        <p class="texto-suave aviso-venta">La venta de entradas para este evento no está disponible.</p>
+                    }
+                    else if (agotado)
+                    {
+                        <p class="agotado aviso-venta">😔 Entradas agotadas</p>
+                    }
+                    else if (User.Identity?.IsAuthenticated != true)
+                    {
+                        <a asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@($"/Eventos/Detalle/{Model.Id}#comprar")"
+                           class="btn-rosa btn-bloque enlace-boton">🎟️ Inicia sesión para comprar</a>
+                    }
+                    else
+                    {
+                        @if (conAsientos)
+                        {
+                            <div class="asientos-elegidos" id="asientosElegidos" data-max="@OpcionesCompras.Value.MaxEntradasPorOrden" aria-live="polite">
+                                <p class="texto-suave">👇 Elige tus asientos en el <a href="#plano">plano del recinto</a> (máx. @OpcionesCompras.Value.MaxEntradasPorOrden).</p>
+                                <ul id="listaAsientos"></ul>
+                            </div>
+                            <div id="inputsAsientos"></div>
+                        }
+                        @* HU30: cupón personal (opcional); se valida en el servidor al reservar *@
+                        var misCupones = await Promociones.CuponesDisponiblesAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                        <div class="campo-cupon">
+                            <label for="cupon">🎁 Cupón de descuento <span class="texto-suave">(opcional)</span></label>
+                            <input id="cupon" name="cupon" type="text" maxlength="20" autocomplete="off" placeholder="AF-XXXXXXXX"
+                                   list="misCupones" style="text-transform:uppercase" />
+                            @if (misCupones.Count > 0)
+                            {
+                                <datalist id="misCupones">
+                                    @foreach (var c in misCupones)
+                                    {
+                                        <option value="@c.Codigo">@c.Promocion!.Nombre · @c.Promocion.Etiqueta</option>
+                                    }
+                                </datalist>
+                                <p class="texto-suave">Tienes @misCupones.Count @(misCupones.Count == 1 ? "cupón disponible" : "cupones disponibles"). El descuento se aplica en el resumen de pago.</p>
+                            }
+                        </div>
+                        <p class="total-compra">Total: <b id="totalCompra">S/ 0.00</b></p>
+                        <button type="submit" class="btn-rosa btn-bloque" id="btnComprar" disabled>🎟️ Comprar entradas</button>
+                        <button type="submit" name="destino" value="carrito" class="btn-gris btn-bloque" id="btnCarrito" disabled>🛒 Agregar al carrito</button>
+                        <p class="texto-suave nota-reserva">Reservamos tus entradas por @OpcionesCompras.Value.MinutosReserva minutos mientras pagas.</p>
+                    }
+                </form>
+            }
+        </div>
+        }
+    </section>
+</div>
+
+<!-- 🗺️ PLANO DEL RECINTO (HU25) -->
+@if (tipos.Count > 0)
+{
+    var zonasPlano = Model.TiposEntrada.OrderBy(t => t.Id).ToList();
+    // HU26: el plano es interactivo cuando se puede comprar (clic en asientos o en zonas)
+    var planoInteractivo = !Model.EsGratuito && Model.Estado == EstadoEvento.Aprobado && Model.Fecha > DateTime.Now && User.Identity?.IsAuthenticated == true;
+    <section class="ficha-seccion plano-recinto" id="plano">
+        <h3>Plano del recinto</h3>
+        <p class="texto-suave">
+            Plantilla: @ActivaFest.Services.Plano.PlanoService.Nombre(Model.PlantillaPlano).ToLowerInvariant()@(Model.PlantillaPlano == PlantillaPlano.Teatro ? " con asientos numerados" : "").
+        </p>
+        @if (planoInteractivo)
+        {
+            <p class="texto-suave">@(Model.PlantillaPlano == PlantillaPlano.Teatro ? "Toca los asientos libres para elegirlos; los grises ya no están disponibles." : "Toca una zona para elegir cuántas entradas quieres.")</p>
+        }
+        @* Pestañas: el plano interactivo (para elegir) y, si el organizador lo subió, el plano oficial del recinto *@
+        @if (!string.IsNullOrEmpty(Model.PlanoOficial))
+        {
+            <div class="plano-pestanas" role="tablist" aria-label="Vistas del plano">
+                <button type="button" role="tab" id="tabPlanoInteractivo" aria-controls="panelPlanoInteractivo" aria-selected="true" class="activa">🪑 Plano interactivo</button>
+                <button type="button" role="tab" id="tabPlanoOficial" aria-controls="panelPlanoOficial" aria-selected="false">🗺️ Plano oficial del recinto</button>
+            </div>
+        }
+        <div id="panelPlanoInteractivo" role="tabpanel" aria-labelledby="tabPlanoInteractivo">
+            <div class="plano-zoom" aria-label="Zoom del plano">
+                <button type="button" data-zoom="-1" aria-label="Alejar">−</button>
+                <button type="button" data-zoom="0" aria-label="Ajustar al ancho">Ajustar</button>
+                <button type="button" data-zoom="1" aria-label="Acercar">+</button>
+            </div>
+            <div class="plano-lienzo @(planoInteractivo ? "plano-interactivo" : "")">@Html.Raw((string)ViewBag.PlanoSvg)</div>
+            @if (Model.PlantillaPlano == PlantillaPlano.Teatro)
+            {
+                <ul class="plano-leyenda plano-leyenda-estados" aria-label="Estados de los asientos">
+                    <li><svg viewBox="-12 -10 24 22" class="butaca-icono" aria-hidden="true"><g fill="#6366f1"><rect x="-10.5" y="5" width="21" height="6" rx="3" fill-opacity=".6"/><rect x="-8.5" y="-9" width="17" height="14" rx="4"/></g></svg> Disponible (color de su zona)</li>
+                    <li><svg viewBox="-12 -10 24 22" class="butaca-icono" aria-hidden="true"><g fill="#3f3f46"><rect x="-10.5" y="5" width="21" height="6" rx="3" fill-opacity=".6"/><rect x="-8.5" y="-9" width="17" height="14" rx="4"/></g></svg> Ocupado</li>
+                    <li><svg viewBox="-12 -10 24 22" class="butaca-icono" aria-hidden="true"><g fill="#ec4899"><rect x="-10.5" y="5" width="21" height="6" rx="3" fill-opacity=".6"/><rect x="-8.5" y="-9" width="17" height="14" rx="4" stroke="#fff" stroke-width="2"/></g></svg> Tu selección</li>
+                </ul>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(Model.PlanoOficial))
+        {
+            <div id="panelPlanoOficial" role="tabpanel" aria-labelledby="tabPlanoOficial" hidden>
+                <a href="@Model.PlanoOficial" target="_blank" rel="noopener" class="plano-oficial">
+                    <img src="@Model.PlanoOficial" alt="Plano oficial de @Model.Ubicacion" loading="lazy" />
+                </a>
+                <p class="texto-suave">Plano proporcionado por el organizador. Ábrelo para verlo en tamaño completo. Para elegir tu zona o asiento usa el plano interactivo.</p>
+            </div>
+        }
+        <ul class="plano-leyenda">
+            @for (var i = 0; i < zonasPlano.Count; i++)
+            {
+                var z = zonasPlano[i];
+                <li>
+                    <span class="plano-punto" style="background: @ActivaFest.Services.Plano.PlanoService.ColorValido(z.Color, i)"></span>
+                    @z.Nombre · @(z.Precio == 0 ? "Gratis" : Formato.Precio(z.Precio))
+                    @if (z.AsientosNumerados)
+                    {
+                        <span class="texto-suave">(@z.Filas filas × @z.AsientosPorFila asientos)</span>
+                    }
+                    @if (!string.IsNullOrEmpty(z.PuertaIngreso))
+                    {
+                        <span class="texto-suave">· 🚪 @z.PuertaIngreso</span>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Descripcion))
+{
+    <section class="ficha-seccion">
+        <h3>Acerca del evento</h3>
+        <p class="descripcion">@Model.Descripcion</p>
+    </section>
+}
+
+<!-- 🗺️ MAPA Y RUTA (HU04) -->
+<section class="ficha-seccion">
+    <h3>Cómo llegar</h3>
+
+    @if (Model.TieneUbicacion)
+    {
+        <div class="ruta-acciones">
+            <button type="button" id="btnRuta" class="btn-rosa">🧭 Trazar ruta desde mi ubicación</button>
+            <a class="btn-gris enlace-boton" target="_blank" rel="noopener"
+               href="https://www.google.com/maps/dir/?api=1&destination=@Model.Latitud!.Value.ToString(inv),@Model.Longitud!.Value.ToString(inv)">
+                Abrir en Google Maps ↗
+            </a>
+        </div>
+        <p id="rutaInfo" class="ruta-info" role="status" aria-live="polite"></p>
+
+        <div id="mapaEvento" class="mapa"
+             data-lat="@Model.Latitud!.Value.ToString(inv)"
+             data-lng="@Model.Longitud!.Value.ToString(inv)"
+             data-titulo="@Model.Titulo"
+             data-direccion="@Model.Ubicacion"></div>
+    }
+    else
+    {
+        <p class="texto-suave">📍 @Model.Ubicacion — el organizador aún no marcó la ubicación exacta en el mapa.</p>
+    }
+</section>
+
+@section Scripts {
+    <script src="~/js/compra.js" asp-append-version="true"></script>
+    <script src="~/js/plano-compra.js" asp-append-version="true"></script>
+    <script src="~/js/plano-vista.js" asp-append-version="true"></script>
+    @if (Model.TieneUbicacion)
+    {
+        <partial name="_LeafletJs" />
+        <script src="~/js/mapa-evento.js" asp-append-version="true"></script>
+    }
+}

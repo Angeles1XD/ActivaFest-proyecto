@@ -1,0 +1,83 @@
+@model ActivaFest.Services.Promociones.PromocionInput
+@{
+    ViewData["Title"] = "Nueva promoción";
+    var conConsentimiento = (int)ViewBag.ConConsentimiento;
+}
+
+@section Styles {
+    <partial name="_EstilosCompra" />
+    <link rel="stylesheet" href="~/css/organizador.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-panel viz-root">
+    <header class="cat-encabezado catalogo-encabezado">
+        <div>
+            <p class="cat-migas">Activa-Fest / Administración / Promociones / Nueva</p>
+            <h1>Nueva <span class="degradado">promoción</span></h1>
+            <p class="cat-subtitulo">Se genera un cupón personal y de un solo uso para cada cliente seleccionado y se le envía por correo.</p>
+        </div>
+        <a asp-controller="Analitica" asp-action="Clientes" class="btn-gris enlace-boton">← Filtro de clientes</a>
+    </header>
+
+    @if (ViewBag.Error is string error)
+    {
+        <div class="alerta-error" role="alert">@error</div>
+    }
+
+    <section class="tarjeta-panel resumen-destinatarios">
+        <p>
+            <b data-dato="seleccionados">@Model.Clientes.Count</b> @(Model.Clientes.Count == 1 ? "cliente seleccionado" : "clientes seleccionados") ·
+            <b data-dato="con-consentimiento">@conConsentimiento</b> @(conConsentimiento == 1 ? "recibirá" : "recibirán") el cupón (aceptaron recibir promociones).
+        </p>
+        @if (!string.IsNullOrEmpty(Model.CriterioSegmento))
+        {
+            <p class="texto-tenue">Filtro usado: @Model.CriterioSegmento</p>
+        }
+        @if (Model.Clientes.Count == 0)
+        {
+            <p class="texto-tenue">Primero elige a los clientes en el <a asp-controller="Analitica" asp-action="Clientes">filtro de clientes</a>.</p>
+        }
+    </section>
+
+    <form asp-action="Crear" method="post" class="tarjeta-panel form-promocion">
+        @foreach (var id in Model.Clientes)
+        {
+            <input type="hidden" name="Clientes" value="@id" />
+        }
+        <input type="hidden" asp-for="CriterioSegmento" />
+
+        <div class="campo">
+            <label asp-for="Nombre">Nombre de la promoción</label>
+            <input asp-for="Nombre" maxlength="100" required placeholder="Ej.: 15 % para clientes VIP" />
+        </div>
+
+        <fieldset class="campo">
+            <legend>Tipo de descuento</legend>
+            <label class="opcion"><input type="radio" asp-for="TipoDescuento" value="@TipoDescuento.Porcentaje" /> Porcentaje (%)</label>
+            <label class="opcion"><input type="radio" asp-for="TipoDescuento" value="@TipoDescuento.Monto" /> Monto fijo (S/)</label>
+        </fieldset>
+
+        <div class="campo">
+            <label asp-for="Valor">Valor</label>
+            <input asp-for="Valor" type="number" min="0.01" step="0.01" required />
+        </div>
+
+        <div class="campo-doble">
+            <div class="campo">
+                <label asp-for="FechaInicio">Válido desde</label>
+                <input asp-for="FechaInicio" type="date" value="@Model.FechaInicio.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div class="campo">
+                <label asp-for="FechaFin">Válido hasta</label>
+                <input asp-for="FechaFin" type="date" value="@Model.FechaFin.ToString("yyyy-MM-dd")" required />
+            </div>
+        </div>
+
+        <div class="campo">
+            <label asp-for="LimiteUsos">Límite de usos <span class="texto-tenue">(opcional: cuántos cupones se pueden canjear en total)</span></label>
+            <input asp-for="LimiteUsos" type="number" min="1" step="1" />
+        </div>
+
+        <button type="submit" class="btn-rosa" disabled="@(conConsentimiento == 0)">🎁 Crear y enviar cupones</button>
+    </form>
+</div>

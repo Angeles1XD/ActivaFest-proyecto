@@ -1,0 +1,53 @@
+@model PaqueteDestacado
+@{
+    var nuevo = Model.Id == 0;
+    ViewData["Title"] = nuevo ? "Nuevo paquete" : "Editar paquete";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<a asp-action="Index" class="enlace-volver">← Paquetes</a>
+<header class="cat-encabezado">
+    <p class="cat-migas">Activa-Fest / Administración</p>
+    <h1>@(nuevo ? "Nuevo" : "Editar") <span class="degradado">paquete</span></h1>
+</header>
+
+<form asp-action="Editar" asp-route-id="@(nuevo ? null : Model.Id)" method="post" class="form-evento">
+    <div asp-validation-summary="All" class="validacion"></div>
+    <fieldset class="seccion-form">
+        <div class="campo">
+            <label asp-for="Nombre"></label>
+            <input asp-for="Nombre" maxlength="60" />
+            <span asp-validation-for="Nombre" class="text-danger"></span>
+        </div>
+        <div class="campo">
+            <label asp-for="Descripcion"></label>
+            <textarea asp-for="Descripcion" rows="2" maxlength="300"></textarea>
+        </div>
+        <div class="campos-fila">
+            <div class="campo">
+                <label asp-for="Dias"></label>
+                <input asp-for="Dias" type="number" min="1" max="90" />
+                <span asp-validation-for="Dias" class="text-danger"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Precio">Precio (S/)</label>
+                <input asp-for="Precio" type="number" min="1" step="0.01" value="@Model.Precio.ToString("0.00", inv)" />
+                <span asp-validation-for="Precio" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="campos-fila">
+            <div class="campo">
+                <label asp-for="Prioridad">Prioridad (1 a 10, mayor aparece primero)</label>
+                <input asp-for="Prioridad" type="number" min="1" max="10" />
+            </div>
+            <label class="campo-check">
+                <input asp-for="Activo" /> A la venta
+            </label>
+        </div>
+    </fieldset>
+    <button type="submit" class="btn-rosa btn-grande">Guardar</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

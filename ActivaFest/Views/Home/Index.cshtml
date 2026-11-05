@@ -1,0 +1,236 @@
+﻿@model InicioViewModel
+@{
+    ViewData["Title"] = "Inicio";
+    var esOrganizador = User.IsInRole(Roles.Organizador) || User.IsInRole(Roles.Administrador);
+    var autenticado = User.Identity?.IsAuthenticated == true;
+}
+
+@section Styles {
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" />
+    <link rel="stylesheet" href="~/css/categorias.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/inicio.css" asp-append-version="true" />
+}
+
+<div class="pagina-categorias pagina-inicio">
+    <!-- 🎉 BIENVENIDA -->
+    <section class="inicio-hero">
+        <!-- Luces de colores y destellos que flotan sobre la foto -->
+        <div class="inicio-aurora" aria-hidden="true"></div>
+        <div class="inicio-destellos" aria-hidden="true">
+            @for (var i = 0; i < 14; i++)
+            {
+                <span></span>
+            }
+        </div>
+
+        <div class="inicio-hero-contenido">
+            @if (Model.PrimerNombre != null)
+            {
+                <p class="inicio-saludo">¡Hola, @Model.PrimerNombre! 👋 Qué bueno verte de nuevo.</p>
+            }
+            else
+            {
+                <p class="inicio-insignia"><span></span> Bienvenido a Activa-Fest</p>
+            }
+
+            <h1>Vive el evento. <span class="degradado">Vive el momento.</span></h1>
+
+            <p class="inicio-lema">
+                Encuentra conciertos, ferias, exposiciones, obras de teatro, actividades culturales
+                y mucho más cerca de ti. Mira dónde queda, cuánto cuesta y cómo llegar, todo en un solo lugar.
+            </p>
+
+            <div class="inicio-acciones">
+                <a asp-controller="Eventos" asp-action="Index" class="cat-boton inicio-boton">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" /><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+                    Explorar eventos
+                </a>
+
+                @if (esOrganizador)
+                {
+                    <a asp-controller="Eventos" asp-action="Crear" class="inicio-boton-secundario">＋ Publica tu evento</a>
+                }
+                else if (!autenticado)
+                {
+                    <a asp-controller="Organizador" asp-action="Solicitar" class="inicio-boton-secundario">＋ Organiza tu evento</a>
+                }
+                else
+                {
+                    <a asp-controller="Categorias" asp-action="Index" class="inicio-boton-secundario">Ver categorías</a>
+                }
+            </div>
+
+            <ul class="inicio-cifras">
+                <li><strong>@Model.TotalEventos</strong> @(Model.TotalEventos == 1 ? "evento próximo" : "eventos próximos")</li>
+                <li><strong>📍</strong> Mapa y ruta de llegada</li>
+                <li><strong>🎟️</strong> Entradas por zona</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 🔎 BÚSQUEDA RÁPIDA (lleva al catálogo con los filtros aplicados) -->
+    <form method="get" asp-controller="Eventos" asp-action="Index" class="inicio-busqueda" role="search">
+        <div class="inicio-campo inicio-campo-texto">
+            <label for="inicioBuscar">¿Qué buscas?</label>
+            <input id="inicioBuscar" type="search" name="Buscar" maxlength="100" placeholder="¿Qué evento estás buscando?" />
+        </div>
+        <div class="inicio-campo">
+            <label for="inicioCategoria">Categoría</label>
+            <select id="inicioCategoria" name="CategoriaId">
+                <option value="">Todas</option>
+                @foreach (var item in Model.Categorias.OrderBy(c => c.Categoria.Nombre))
+                {
+                    <option value="@item.Categoria.Id">@item.Categoria.Icono @item.Categoria.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="inicio-campo">
+            <label for="inicioFecha">Desde</label>
+            <input id="inicioFecha" type="date" name="Desde" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+        </div>
+        <button type="submit" class="cat-boton">Buscar</button>
+    </form>
+
+    <!-- ⭐ DESTACADOS (paquetes publicitarios, HU12) -->
+    @if (Model.Destacados.Count > 0)
+    {
+        <section class="inicio-seccion">
+            <div class="inicio-seccion-titulo">
+                <div>
+                    <h2>⭐ Eventos destacados</h2>
+                    <p>Los más recomendados de la temporada</p>
+                </div>
+            </div>
+            <div class="cat-eventos-grid">
+                @foreach (var evento in Model.Destacados)
+                {
+                    <partial name="_EventoCardModerno" model="evento" />
+                }
+            </div>
+        </section>
+    }
+
+    <!-- ✨ RECOMENDADOS PARA TI (HU17) -->
+    @if (Model.Recomendados.Count > 0)
+    {
+        <section class="inicio-seccion" id="recomendados">
+            <div class="inicio-seccion-titulo">
+                <div>
+                    @if (Model.RecomendacionesPersonalizadas)
+                    {
+                        <h2>✨ Recomendados para ti</h2>
+                        <p>Según lo que buscas, los eventos que visitas@(Model.UsaUbicacion ? " y qué tan cerca están" : "")</p>
+                    }
+                    else
+                    {
+                        @* Usuario nuevo sin historial: los más populares cercanos (HU17) *@
+                        <h2>🔥 Populares @(Model.UsaUbicacion ? "cerca de ti" : "en ActivaFest")</h2>
+                        <p>Mientras más eventos explores, más personalizadas serán tus recomendaciones</p>
+                    }
+                </div>
+                @if (Model.UsaUbicacion)
+                {
+                    <a asp-controller="Home" asp-action="Index" asp-fragment="recomendados" class="inicio-ver-todo">Quitar ubicación</a>
+                }
+                else
+                {
+                    <button type="button" class="inicio-ver-todo boton-ubicacion" id="usarUbicacion" data-ancla="recomendados">📍 Usar mi ubicación</button>
+                }
+            </div>
+            <p class="inicio-aviso" id="avisoUbicacion" role="status" hidden></p>
+            <div class="cat-eventos-grid">
+                @foreach (var evento in Model.Recomendados)
+                {
+                    <partial name="_EventoCardModerno" model="evento" />
+                }
+            </div>
+        </section>
+    }
+
+    <!-- 🗂️ CATEGORÍAS -->
+    <section class="inicio-seccion">
+        <div class="inicio-seccion-titulo">
+            <div>
+                <h2>Explora por categorías</h2>
+                <p>Elige lo que te mueve</p>
+            </div>
+            <a asp-controller="Categorias" asp-action="Index" class="inicio-ver-todo">Ver todas →</a>
+        </div>
+
+        <div class="cat-grid inicio-cat-grid">
+            @foreach (var item in Model.Categorias)
+            {
+                var c = item.Categoria;
+                <a asp-controller="Categorias" asp-action="Index" asp-route-CategoriaId="@c.Id"
+                   class="cat-tile @(item.Cantidad == 0 ? "vacia" : "")" style="--c: @Formato.Color(c.Color)">
+                    @if (c.Imagen != null)
+                    {
+                        <img src="@c.Imagen" alt="" loading="lazy" />
+                    }
+                    <span class="cat-kicker">Descubre</span>
+                    <span class="cat-nombre">@c.Nombre</span>
+                    <span class="cat-cantidad">@(item.Cantidad == 0 ? "Próximamente" : CategoriasViewModel.TextoCantidad(item.Cantidad))</span>
+                </a>
+            }
+        </div>
+    </section>
+
+    <!-- 📅 PRÓXIMOS EVENTOS -->
+    <section class="inicio-seccion">
+        <div class="inicio-seccion-titulo">
+            <div>
+                <h2>Próximos eventos</h2>
+                <p>Lo que se viene en las próximas semanas</p>
+            </div>
+            @if (Model.Proximos.Count > 0)
+            {
+                <a asp-controller="Eventos" asp-action="Index" class="inicio-ver-todo">Ver todos →</a>
+            }
+        </div>
+
+        @if (Model.Proximos.Count == 0)
+        {
+            <div class="cat-vacio">
+                <p>Muy pronto verás aquí los primeros eventos. 🎶</p>
+                @if (esOrganizador)
+                {
+                    <a asp-controller="Eventos" asp-action="Crear" class="cat-boton">Publica el primero</a>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="cat-eventos-grid">
+                @foreach (var evento in Model.Proximos)
+                {
+                    <partial name="_EventoCardModerno" model="evento" />
+                }
+            </div>
+        }
+    </section>
+
+    <!-- 📣 LLAMADO A ORGANIZADORES -->
+    @if (!esOrganizador)
+    {
+        <section class="inicio-organiza">
+            <div>
+                <h2>¿Organizas eventos?</h2>
+                <p>Publica tu evento con fotos, precios por zona y ubicación en el mapa. Nuestro equipo lo revisa y lo pone frente a miles de personas.</p>
+            </div>
+            @if (autenticado)
+            {
+                <a asp-controller="Organizador" asp-action="Solicitar" class="cat-boton">Solicitar ser organizador</a>
+            }
+            else
+            {
+                <a asp-controller="Organizador" asp-action="Solicitar" class="cat-boton">Ver requisitos para organizar</a>
+            }
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/ubicacion.js" asp-append-version="true"></script>
+}

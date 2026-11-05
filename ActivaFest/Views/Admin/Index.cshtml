@@ -1,0 +1,96 @@
+@inject ActivaFest.Services.Organizadores.ISolicitudOrganizadorService SolicitudesOrg
+@inject ActivaFest.Services.Organizadores.ISolicitudPersonalService SolicitudesPer
+@model List<Evento>
+@{
+    ViewData["Title"] = "Moderación de eventos";
+    var actual = (EstadoEvento)ViewBag.EstadoActual;
+    var conteos = (Dictionary<EstadoEvento, int>)ViewBag.Conteos;
+    var pendientesSolicitudes = await SolicitudesOrg.PendientesAsync() + await SolicitudesPer.PendientesAsync();
+}
+
+<header class="cat-encabezado catalogo-encabezado">
+    <div>
+        <p class="cat-migas">Activa-Fest / Administración</p>
+        <h1>Moderación de <span class="degradado">eventos</span></h1>
+        <p class="cat-subtitulo">Revisa los eventos enviados por los organizadores antes de publicarlos en el catálogo.</p>
+    </div>
+    <div class="panel-acciones">
+        <a asp-controller="Analitica" asp-action="Index" class="btn-gris enlace-boton">📊 Dashboard</a>
+        <a asp-controller="Comisiones" asp-action="Index" class="btn-gris enlace-boton">💰 Comisiones</a>
+        <a asp-controller="Promociones" asp-action="Index" class="btn-gris enlace-boton">🎁 Promociones</a>
+        <a asp-controller="Solicitudes" asp-action="Index" class="btn-gris enlace-boton">📥 Solicitudes@(pendientesSolicitudes > 0 ? $" ({pendientesSolicitudes})" : "")</a>
+        <a asp-controller="Paquetes" asp-action="Index" class="btn-gris enlace-boton">⭐ Paquetes</a>
+        <a asp-controller="Usuarios" asp-action="Index" class="btn-gris enlace-boton">👥 Usuarios</a>
+    </div>
+</header>
+
+<div class="tabs-estado">
+    @foreach (var estado in Enum.GetValues<EstadoEvento>())
+    {
+        <a asp-action="Index" asp-route-estado="@estado" class="@(estado == actual ? "activo" : "")">
+            @estado (@conteos.GetValueOrDefault(estado))
+        </a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <p class="texto-suave">No hay eventos en estado <b>@actual</b>.</p>
+}
+
+<div class="grid-eventos">
+@foreach (var item in Model)
+{
+    var finalizado = item.YaOcurrio(DateTime.Now);
+
+    <div class="card-evento">
+        <span class="badge-estado badge-@item.Estado">@item.Estado</span>
+        @if (finalizado)
+        {
+            <span class="badge-estado badge-Finalizado">Finalizado</span>
+        }
+        <h3 style="margin-top:10px;">@item.Titulo</h3>
+
+        <p>📍 @item.Ubicacion</p>
+        <p>📅 @item.Fecha.ToString("dd/MM/yyyy HH:mm")</p>
+        <p>@item.Categoria?.Icono @item.Categoria?.Nombre</p>
+        <p>👥 Aforo: @item.Aforo@(item.EsGratuito ? " · 🎉 Entrada libre" : "")</p>
+        @if (item.PendientePagoPublicacion)
+        {
+            <p class="aviso-vencido" data-dato="esperando-pago">💳 Esperando el pago de la publicación: se podrá aprobar cuando el organizador pague.</p>
+        }
+        <p class="texto-suave">
+            Organizador: @(item.Organizador?.NombreCompleto ?? "—") (@(item.Organizador?.Email ?? "sin correo"))
+            · Enviado: @item.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+        </p>
+
+        @if (item.Estado == EstadoEvento.Rechazado && !string.IsNullOrEmpty(item.MotivoRechazo))
+        {
+            <p class="texto-suave">Motivo del rechazo: @item.MotivoRechazo</p>
+        }
+
+        @if (finalizado && item.Estado == EstadoEvento.Pendiente)
+        {
+            <p class="aviso-vencido">⚠ La fecha de este evento ya pasó: no se puede aprobar. Recházalo indicando el motivo.</p>
+        }
+
+        <div class="acciones-moderacion">
+            @* Solo los pendientes se moderan (diagrama de estados del evento) *@
+            @if (item.Estado == EstadoEvento.Pendiente && !finalizado && !item.PendientePagoPublicacion)
+            {
+                <form asp-action="Aprobar" asp-route-id="@item.Id" method="post">
+                    <button type="submit" class="btn-rosa">✔ Aprobar</button>
+                </form>
+            }
+            @if (item.Estado == EstadoEvento.Pendiente)
+            {
+                <form asp-action="Rechazar" asp-route-id="@item.Id" method="post" class="form-rechazo">
+                    <input type="text" name="motivo" placeholder="Motivo del rechazo (obligatorio)" required maxlength="500" />
+                    <button type="submit" class="btn-gris">✖ Rechazar</button>
+                </form>
+            }
+            <a asp-controller="Eventos" asp-action="Detalle" asp-route-id="@item.Id" class="btn-gris" style="text-decoration:none;">Ver ficha</a>
+        </div>
+    </div>
+}
+</div>

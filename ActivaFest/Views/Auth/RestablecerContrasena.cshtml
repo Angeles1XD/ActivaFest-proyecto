@@ -1,0 +1,36 @@
+@model RestablecerContrasenaViewModel
+@{
+    ViewData["Title"] = "Nueva contraseña";
+}
+
+<div class="auth-card">
+    <h2 class="text-gradient">Nueva contraseña</h2>
+
+    <form asp-action="RestablecerContrasena" method="post">
+        <div asp-validation-summary="ModelOnly" class="validacion"></div>
+        <input type="hidden" asp-for="Email" />
+        <input type="hidden" asp-for="Token" />
+
+        <div class="campo">
+            <label asp-for="Password"></label>
+            <input asp-for="Password" autocomplete="new-password" />
+            <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+
+        <div class="campo">
+            <label asp-for="ConfirmarPassword"></label>
+            <input asp-for="ConfirmarPassword" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmarPassword" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn-rosa">Guardar contraseña</button>
+    </form>
+
+    <div class="auth-links">
+        <p>¿El enlace venció o ya lo usaste? <a asp-action="OlvideContrasena">Solicita uno nuevo</a></p>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
