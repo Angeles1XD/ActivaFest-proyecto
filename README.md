@@ -62,6 +62,18 @@ http://localhost:5054
 
 La aplicación utiliza SQLite en desarrollo y dispone de una pasarela de pagos simulada para realizar pruebas.
 
+### Modo de demostración académica
+
+El perfil `demo` usa una base SQLite independiente (`ActivaFest/app-demo.db`) y crea datos históricos ficticios desde julio de 2026 hasta hoy. El dashboard muestra la indicación «Datos simulados para demostración académica». La base de trabajo `app.db`, sus usuarios y compras no se utilizan ni se modifican en este modo.
+
+Desde la carpeta de la solución, inicia el modo con:
+
+```bash
+dotnet run --project ActivaFest/ActivaFest.csproj --launch-profile demo
+```
+
+En cambio, el perfil `http` conserva la base configurada en `DefaultConnection` y agrega de forma idempotente los eventos de ejemplo, sin crear compras simuladas.
+
 ## 4. Pruebas del sistema
 
 El proyecto incluye pruebas unitarias y de integración para verificar las funcionalidades implementadas.

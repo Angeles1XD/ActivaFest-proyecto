@@ -259,18 +259,27 @@ public class HU21DashboardTests : IDisposable
         Assert.Equal(10, a.Acumulado.Entradas);
         Assert.Equal(3, a.Acumulado.Compradores);
 
-        // ana ya había comprado en octubre; beto y carla compran por primera vez
-        Assert.Equal((3, 1, 2), (a.Compradores, a.CompradoresRecurrentes, a.CompradoresNuevos));
+        // En noviembre cada comprador tiene una compra; la compra anterior de Ana fue en octubre.
+        Assert.Equal((3, 0, 3), (a.Compradores, a.CompradoresRecurrentes, a.CompradoresNuevos));
 
         Assert.Equal(new[] { "Rock", "Hamlet" }, a.TopEventos.Select(e => e.Evento));
         Assert.Equal((300m, 24m, 6), (a.TopEventos[0].Ingresos, a.TopEventos[0].Comision, a.TopEventos[0].Entradas));
         Assert.Equal(a.Comisiones, a.PorCategoria.Sum(c => c.Comisiones));
 
-        Assert.Equal(AnaliticaService.MesesTendencia, a.Meses.Count);
-        Assert.Equal(new[] { 80m, 540m }, a.Meses.TakeLast(2).Select(m => m.Ingresos));
+        var inicioSerie = AnaliticaService.InicioSerieHistorica;
+        var hoy = DateTime.Today;
+        var finMes = new DateTime(hoy.Year, hoy.Month, 1);
+        var cantidadMeses = (finMes.Year - inicioSerie.Year) * 12 + finMes.Month - inicioSerie.Month + 1;
+        var pagosEnSerie = _e.Db.Ordenes.AsNoTracking().Where(o => o.Estado == EstadoOrden.Pagada)
+            .ToList().Where(o => o.FechaPago!.Value.ToLocalTime().Date >= inicioSerie && o.FechaPago.Value.ToLocalTime().Date <= hoy).ToList();
+        Assert.Equal(cantidadMeses, a.Meses.Count);
+        Assert.Equal(inicioSerie.ToString("MMM yy", System.Globalization.CultureInfo.GetCultureInfo("es-PE")).Replace(".", ""), a.Meses[0].Etiqueta);
+        Assert.Equal(pagosEnSerie.Sum(o => o.Total), a.Meses.Sum(m => m.Ingresos));
+        Assert.Equal(pagosEnSerie.Sum(o => o.Comision), a.Meses.Sum(m => m.Comisiones));
 
         Assert.Equal(new[] { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" }, a.DiasSemana.Select(x => x.Dia));
-        Assert.Equal(new[] { 1, 0, 0, 1, 1, 0, 0 }, a.DiasSemana.Select(x => x.Compras));
+        Assert.Equal(pagosEnSerie.Count, a.DiasSemana.Sum(x => x.Compras));
+        Assert.Equal(pagosEnSerie.Sum(o => o.Total), a.DiasSemana.Sum(x => x.Ingresos));
 
         Assert.Equal(ClienteAnalitica.CodigoDe("carla"), a.TopCompradores[0].Cliente);
         Assert.All(a.TopCompradores, c => Assert.StartsWith("#", c.Cliente));

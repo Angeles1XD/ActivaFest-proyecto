@@ -49,7 +49,7 @@ public class AnalisisVentas
     public double? Conversion { get; set; }
     public int VisitasEventos { get; set; }
 
-    // Compradores únicos del período. Recurrente: ya había comprado antes de que empezara el período.
+    // Compradores únicos del período. Recurrente: realizó más de una compra dentro del período.
     public int Compradores { get; set; }
     public int CompradoresRecurrentes { get; set; }
     public int CompradoresNuevos => Compradores - CompradoresRecurrentes;
@@ -203,7 +203,7 @@ public static class Recomendador
             var recompra = 100.0 * a.CompradoresRecurrentes / a.Compradores;
             if (recompra < 30)
                 r.Add(new Recomendacion(Media, TemaClientes, "Pocos compradores repiten",
-                    $"{a.CompradoresRecurrentes} de {a.Compradores} compradores ya habían comprado antes ({Pct(recompra)})",
+                    $"{a.CompradoresRecurrentes} de {a.Compradores} compradores realizaron más de una compra en el período ({Pct(recompra)})",
                     "Crea un cupón para la segunda compra y avisa de eventos similares a los que ya asistieron."));
         }
     }

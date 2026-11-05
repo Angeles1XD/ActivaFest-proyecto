@@ -1,5 +1,6 @@
 @model ActivaFest.Services.Panel.ListadoPanel
 @using ActivaFest.Services.Panel
+@inject IConfiguration Configuration
 @{
     ViewData["Title"] = "Panel de ventas";
     var ahora = DateTime.Now;
@@ -36,6 +37,10 @@
         <p class="cat-migas">Activa-Fest / @(esAdmin ? "Administración" : "Organizador")</p>
         <h1>Panel de <span class="degradado">ventas</span></h1>
         <p class="cat-subtitulo">Ventas, ingresos y aforo de @(esAdmin ? "los eventos de la plataforma" : "tus eventos"), calculados a partir de las compras confirmadas.</p>
+        @if (Configuration.GetValue<bool>("Demo:Enabled"))
+        {
+            <p class="texto-tenue">Datos simulados para demostración académica</p>
+        }
     </header>
 
     <!-- 🔎 Búsqueda y filtros -->

@@ -1,6 +1,7 @@
 @model ActivaFest.Services.Analitica.DashboardAnalitica
 @using System.Text.Json
 @using ActivaFest.Services.Analitica
+@inject IConfiguration Configuration
 @{
     ViewData["Title"] = "Dashboard de la plataforma";
     var categorias = (List<Categoria>)ViewBag.Categorias;
@@ -47,6 +48,10 @@
                 <span class="en-vivo" aria-hidden="true"></span>
                 En vivo: se actualiza solo cada 20 segundos · <span id="actualizado" data-calculado="@Model.CalculadoEn.ToString("o")">actualizado ahora</span>
             </p>
+            @if (Configuration.GetValue<bool>("Demo:Enabled"))
+            {
+                <p class="texto-tenue">Datos simulados para demostración académica</p>
+            }
         </div>
         <div class="panel-acciones">
             <a asp-action="Variabilidad" class="btn-gris enlace-boton">📈 Variabilidad</a>
@@ -256,7 +261,7 @@
         <div class="graficos-dashboard graficos-iguales" id="seccionTendencia">
             <section class="tarjeta-panel">
                 <h2>Ingresos por mes</h2>
-                <p class="texto-tenue">Soles, últimos @AnaliticaService.MesesTendencia meses hasta el @F(Model.Hasta)</p>
+                <p class="texto-tenue">Soles, desde julio de 2026 hasta el @F(DateTime.Today)</p>
                 <p class="texto-tenue" id="graficoMesesVacio" hidden>No hay ingresos en estos meses.</p>
                 <div class="grafico-chart"><canvas id="graficoMeses" role="img" aria-label="Ingresos por mes"></canvas></div>
                 <details class="ver-tabla" id="tablaMeses"><summary>Ver tabla</summary></details>
@@ -264,14 +269,14 @@
             </section>
             <section class="tarjeta-panel">
                 <h2>Comisiones por mes</h2>
-                <p class="texto-tenue">Soles que cobró la plataforma, últimos @AnaliticaService.MesesTendencia meses</p>
+                <p class="texto-tenue">Soles que cobró la plataforma desde julio de 2026 hasta hoy</p>
                 <p class="texto-tenue" id="graficoComisionesMesVacio" hidden>No hay comisiones en estos meses.</p>
                 <div class="grafico-chart"><canvas id="graficoComisionesMes" role="img" aria-label="Comisiones por mes"></canvas></div>
                 <div class="ia-ejemplos"><button type="button" class="ia-ejemplo" data-pregunta="¿Qué comisiones dejó cada evento?">🤖 Analizar con IA</button></div>
             </section>
             <section class="tarjeta-panel">
                 <h2>Compras por día de la semana</h2>
-                <p class="texto-tenue">Compras pagadas en el período; el día con más ventas va resaltado</p>
+                <p class="texto-tenue">Compras pagadas desde julio de 2026 hasta hoy; el día con más ventas va resaltado</p>
                 <p class="texto-tenue" id="graficoDiasVacio" hidden>No hay compras en este período.</p>
                 <div class="grafico-chart"><canvas id="graficoDias" role="img" aria-label="Compras por día de la semana"></canvas></div>
                 <details class="ver-tabla" id="tablaDias"><summary>Ver tabla</summary></details>
@@ -364,7 +369,7 @@
 
         <section class="tarjeta-panel" id="seccionCompradores" aria-labelledby="tituloCompradores">
             <h2 id="tituloCompradores">👥 Compradores</h2>
-            <p class="texto-tenue">Usuarios que compraron en el período. Recurrente: ya había comprado antes de que empezara el período.</p>
+            <p class="texto-tenue">Usuarios que compraron en el período. Recurrentes: hicieron más de una compra dentro del período.</p>
             <div class="fila-kpi fila-kpi-dashboard">
                 <div class="kpi"><span class="kpi-etiqueta">Compradores</span><span class="kpi-valor" id="compradoresTotal">—</span><span class="kpi-nota">usuarios únicos</span></div>
                 <div class="kpi"><span class="kpi-etiqueta">Nuevos</span><span class="kpi-valor" id="compradoresNuevos">—</span><span class="kpi-nota">su primera compra</span></div>

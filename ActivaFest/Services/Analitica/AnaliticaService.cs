@@ -231,10 +231,10 @@ public class AnaliticaService : IAnaliticaService
 {
     public const int SemanasTendencia = 10;
     public const int VentasPorPagina = 20;
-    public const int MesesTendencia = 12;
     public const int EventosEnAnalisis = 10;
     public const int CompradoresEnAnalisis = 5;
     public const int ZonasEnAnalisis = 8;
+    public static readonly DateTime InicioSerieHistorica = new(2026, 7, 1);
     private static readonly TimeSpan DuracionCache = TimeSpan.FromMinutes(5);
 
     private readonly ApplicationDbContext _db;
@@ -466,14 +466,14 @@ public class AnaliticaService : IAnaliticaService
         a.DiasSemana = await DiasSemanaAsync(f, ct);
         (a.VentasDiarias, a.ComprasPorHora) = await SeriesDelPeriodoAsync(f, ct);
 
-        // ---------- Compradores únicos: nuevos y recurrentes ----------
+        // ---------- Compradores únicos: nuevos y recurrentes dentro del período ----------
         var periodo = PagadasDe(f.Desde, f.Hasta, f);
-        var compradores = await periodo.Select(o => o.UsuarioId).Distinct().ToListAsync(ct);
-        var inicioUtc = f.Desde.Date.ToUniversalTime();
-        a.Compradores = compradores.Count;
-        a.CompradoresRecurrentes = await _db.Ordenes.AsNoTracking()
-            .Where(o => o.Estado == EstadoOrden.Pagada && o.FechaPago < inicioUtc && compradores.Contains(o.UsuarioId))
-            .Select(o => o.UsuarioId).Distinct().CountAsync(ct);
+        var frecuenciaCompradores = await periodo
+            .GroupBy(o => o.UsuarioId)
+            .Select(g => new { UsuarioId = g.Key, Compras = g.Count() })
+            .ToListAsync(ct);
+        a.Compradores = frecuenciaCompradores.Count;
+        a.CompradoresRecurrentes = frecuenciaCompradores.Count(c => c.Compras > 1);
 
         // ---------- Eventos destacados, eventos y categorías con más ventas ----------
         a.Destacados = await DestacadosAsync(f, ct);
@@ -595,18 +595,23 @@ public class AnaliticaService : IAnaliticaService
             .ToList();
     }
 
-    // Últimos 12 meses hasta el fin del período
+    // Serie histórica fija desde julio de 2026 hasta el mes actual; solo incluye pagos hasta hoy.
     private async Task<List<PuntoMes>> MesesAsync(FiltroAnalitica f, CancellationToken ct)
     {
-        var ultimoMes = new DateTime(f.Hasta.Year, f.Hasta.Month, 1);
-        var primerMes = ultimoMes.AddMonths(-(MesesTendencia - 1));
-        var pagos = await PagadasDe(primerMes, f.Hasta, f)
+        var hoy = DateTime.Today;
+        if (hoy < InicioSerieHistorica)
+            return new List<PuntoMes>();
+
+        var ultimoMes = new DateTime(hoy.Year, hoy.Month, 1);
+        var cantidadMeses = (ultimoMes.Year - InicioSerieHistorica.Year) * 12
+            + ultimoMes.Month - InicioSerieHistorica.Month + 1;
+        var pagos = await PagadasDe(InicioSerieHistorica, hoy, f)
             .Select(o => new { o.FechaPago, o.Total, o.Comision })
             .ToListAsync(ct);
         var porMes = pagos.ToLookup(p => { var l = p.FechaPago!.Value.ToLocalTime(); return new DateTime(l.Year, l.Month, 1); });
 
-        return Enumerable.Range(0, MesesTendencia)
-            .Select(i => primerMes.AddMonths(i))
+        return Enumerable.Range(0, cantidadMeses)
+            .Select(i => InicioSerieHistorica.AddMonths(i))
             .Select(m => new PuntoMes(m.ToString("MMM yy", CultureInfo.GetCultureInfo("es-PE")).Replace(".", ""), porMes[m].Sum(p => p.Total), porMes[m].Sum(p => p.Comision)))
             .ToList();
     }
@@ -637,7 +642,11 @@ public class AnaliticaService : IAnaliticaService
 
     private async Task<List<PuntoDiaSemana>> DiasSemanaAsync(FiltroAnalitica f, CancellationToken ct)
     {
-        var pagos = await PagadasDe(f.Desde, f.Hasta, f)
+        var hoy = DateTime.Today;
+        if (hoy < InicioSerieHistorica)
+            return new List<PuntoDiaSemana>();
+
+        var pagos = await PagadasDe(InicioSerieHistorica, hoy, f)
             .Select(o => new { o.FechaPago, o.Total })
             .ToListAsync(ct);
         var porDia = pagos.ToLookup(p => p.FechaPago!.Value.ToLocalTime().DayOfWeek);

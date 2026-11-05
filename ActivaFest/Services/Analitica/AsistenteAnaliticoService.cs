@@ -561,7 +561,7 @@ public class FuncionesAnaliticas
         };
         var texto = a.Compradores == 0
             ? $"Nadie compró {p.Etiqueta}."
-            : $"{a.Compradores:N0} {(a.Compradores == 1 ? "usuario compró" : "usuarios compraron")} {p.Etiqueta}: {a.CompradoresNuevos:N0} por primera vez y {a.CompradoresRecurrentes:N0} que ya habían comprado antes.";
+            : $"{a.Compradores:N0} {(a.Compradores == 1 ? "usuario compró" : "usuarios compraron")} {p.Etiqueta}: {a.CompradoresNuevos:N0} por primera vez y {a.CompradoresRecurrentes:N0} con más de una compra en el período.";
         return Guardar("Compradores", p.Etiqueta, texto, tabla,
             new GraficoSugerido { Serie = "Compradores", Etiquetas = new() { "Nuevos", "Recurrentes" }, Valores = new() { a.CompradoresNuevos, a.CompradoresRecurrentes } });
     }
@@ -646,7 +646,7 @@ public class FuncionesAnaliticas
     }
 
     [KernelFunction("VentasPorDia")]
-    [Description("Compras e ingresos por día de la semana en un período (fechas yyyy-MM-dd).")]
+    [Description("Compras e ingresos por día de la semana desde julio de 2026 hasta hoy.")]
     public async Task<string> VentasPorDiaAsync(string? desde = null, string? hasta = null, CancellationToken ct = default)
     {
         var p = Periodo(desde, hasta);
@@ -658,20 +658,22 @@ public class FuncionesAnaliticas
             Filas = a.DiasSemana.Select(d => new List<string> { d.Dia, d.Compras.ToString("N0", Pe), Formato.Monto(d.Ingresos) }).ToList()
         };
         var mejor = a.DiasSemana.OrderByDescending(d => d.Compras).First();
-        var texto = a.Compras == 0
-            ? $"No hubo ventas pagadas {p.Etiqueta}."
-            : $"{mejor.Dia} es el día con más compras {p.Etiqueta}: {mejor.Compras:N0} de {a.Compras:N0}, por {Formato.Monto(mejor.Ingresos)}.";
-        return Guardar("VentasPorDia", p.Etiqueta, texto, tabla,
+        var periodoHistorico = $"desde {AnaliticaService.InicioSerieHistorica.ToString("MMMM 'de' yyyy", Pe)} hasta hoy";
+        var compras = a.DiasSemana.Sum(d => d.Compras);
+        var texto = compras == 0
+            ? $"No hubo ventas pagadas {periodoHistorico}."
+            : $"{mejor.Dia} es el día con más compras {periodoHistorico}: {mejor.Compras:N0} de {compras:N0}, por {Formato.Monto(mejor.Ingresos)}.";
+        return Guardar("VentasPorDia", periodoHistorico, texto, tabla,
             new GraficoSugerido { Serie = "Compras", Etiquetas = a.DiasSemana.Select(d => d.Dia).ToList(), Valores = a.DiasSemana.Select(d => (double)d.Compras).ToList() });
     }
 
     [KernelFunction("VentasPorMes")]
-    [Description("Ingresos y comisiones de los últimos 12 meses hasta una fecha (yyyy-MM-dd): la evolución de las ventas.")]
+    [Description("Ingresos y comisiones mensuales desde julio de 2026 hasta hoy.")]
     public async Task<string> VentasPorMesAsync(string? desde = null, string? hasta = null, CancellationToken ct = default)
     {
         var p = Periodo(desde, hasta);
         var meses = (await AnalisisAsync(p, ct)).Meses;
-        var periodo = $"últimos {AnaliticaService.MesesTendencia} meses";
+        var periodo = $"desde {AnaliticaService.InicioSerieHistorica.ToString("MMMM 'de' yyyy", Pe)} hasta hoy";
         var tabla = new TablaCifras
         {
             Titulo = $"Ingresos y comisiones de los {periodo}",

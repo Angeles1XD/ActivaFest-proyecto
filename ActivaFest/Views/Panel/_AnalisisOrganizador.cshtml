@@ -87,7 +87,7 @@
     <div class="graficos-dashboard graficos-iguales">
         <section class="tarjeta-panel">
             <h2>Ingresos por mes</h2>
-            <p class="texto-tenue">Soles, últimos @AnaliticaService.MesesTendencia meses hasta el @filtro.Hasta.ToString("dd/MM/yyyy")</p>
+            <p class="texto-tenue">Soles, desde julio de 2026 hasta el @DateTime.Today.ToString("dd/MM/yyyy")</p>
             <p class="texto-tenue" id="graficoMesesVacio" hidden>No hay ingresos en estos meses.</p>
             <div class="grafico-chart"><canvas id="graficoMeses" role="img" aria-label="Ingresos por mes"></canvas></div>
             <details class="ver-tabla" id="tablaMeses"><summary>Ver tabla</summary></details>

@@ -80,6 +80,7 @@ TestResults/
 *.mdf
 *.ldf
 *.db*
+app-demo.db*
 
 ## =========================
 ## 🖼️ Imágenes subidas por usuarios

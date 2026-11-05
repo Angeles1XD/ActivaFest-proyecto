@@ -18,7 +18,11 @@ var builder = WebApplication.CreateBuilder(args);
 // =============================
 // 🔥 BASE DE DATOS SQLITE
 // =============================
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=app.db";
+var modoDemo = builder.Configuration.GetValue<bool>("Demo:Enabled");
+var sembrarEventosEjemplo = modoDemo || builder.Configuration.GetValue("Demo:SeedEvents", true);
+var connectionString = modoDemo
+    ? $"Data Source={Path.Combine(builder.Environment.ContentRootPath, "app-demo.db")}"
+    : builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=app.db";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
@@ -248,6 +252,22 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 
     await DbInitializer.SeedAsync(scope.ServiceProvider, app.Configuration, app.Logger);
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var organizadorId = modoDemo
+        ? await DemoDataInitializer.SeedOrganizadorDemoAsync(userManager, app.Logger)
+        : (await userManager.GetUsersInRoleAsync(Roles.Organizador)).FirstOrDefault()?.Id
+            ?? (await userManager.GetUsersInRoleAsync(Roles.Administrador)).FirstOrDefault()?.Id
+            ?? await userManager.Users.OrderBy(u => u.Id).Select(u => u.Id).FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("No se encontró una cuenta para asignar la organización de los eventos de ejemplo.");
+
+    if (sembrarEventosEjemplo)
+        await DemoDataInitializer.SeedEventosAsync(db, organizadorId, app.Logger);
+    if (modoDemo)
+    {
+        await DemoDataInitializer.AsignarEventosDemoAsync(db, organizadorId);
+        await DemoDataInitializer.SeedVentasAsync(db, organizadorId, app.Configuration, app.Logger);
+    }
+
     await DbInitializer.ReubicarAsientosAsync(db, app.Logger);
 
     // Falla al arrancar (y no al primer pago) si falta la clave para firmar los QR en producción

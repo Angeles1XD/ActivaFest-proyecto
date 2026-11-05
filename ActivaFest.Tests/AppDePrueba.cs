@@ -64,6 +64,7 @@ public class AppDePrueba : WebApplicationFactory<Program>
         builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_archivoBd};Pooling=False");
         builder.UseSetting("SeedAdmin:Email", "admin@test.com");
         builder.UseSetting("SeedAdmin:Password", "Admin123!");
+        builder.UseSetting("Demo:SeedEvents", "false");
         builder.ConfigureTestServices(s =>
         {
             s.AddSingleton<IEmailService>(Correos);
