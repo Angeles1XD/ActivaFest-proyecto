@@ -92,7 +92,7 @@ public class HU01RegistroLoginTests : IClassFixture<AppDePrueba>
             var datos = new Dictionary<string, string>
             {
                 ["__RequestVerificationToken"] = await TokenAsync(cliente, "/Auth/Registro"),
-                ["NombreCompleto"] = "Intruso", ["Email"] = email, ["Password"] = "Clave1234", ["ConfirmarPassword"] = "Clave1234",
+                ["NombreCompleto"] = "Intruso", ["Email"] = email, ["FechaNacimiento"] = "2000-05-20", ["Password"] = "Clave1234", ["ConfirmarPassword"] = "Clave1234",
                 ["Rol"] = rol, ["AceptaTratamientoDatos"] = "true"
             };
             await cliente.PostAsync("/Auth/Registro", new FormUrlEncodedContent(datos));

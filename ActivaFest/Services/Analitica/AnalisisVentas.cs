@@ -28,6 +28,31 @@ public record DestacadoAnalisis(int EventoId, string Evento, string Paquete, str
 
 public record Recomendacion(string Prioridad, string Tema, string Hallazgo, string Dato, string Accion);
 
+public record CategoriaEdad(string Categoria, int Asistieron);
+
+// Un rango de edad en los eventos ya realizados. La edad es la de la cuenta que compró, el día del evento.
+public record EdadAnalisis(string Rango, int Personas, int Entradas, int Asistieron, List<CategoriaEdad> PorCategoria)
+{
+    public double? Asistencia => Entradas == 0 ? null : Math.Round(100.0 * Asistieron / Entradas, 1);
+    public string? CategoriaFavorita => PorCategoria.FirstOrDefault(c => c.Asistieron > 0)?.Categoria;
+}
+
+public static class RangoEdad
+{
+    public const string Menores = "Menor de 18", Mayores = "55 o más";
+    public static readonly string[] Todos = { Menores, "18 a 24", "25 a 34", "35 a 44", "45 a 54", Mayores };
+
+    public static string De(int edad) => edad switch
+    {
+        < 18 => Menores,
+        < 25 => "18 a 24",
+        < 35 => "25 a 34",
+        < 45 => "35 a 44",
+        < 55 => "45 a 54",
+        _ => Mayores
+    };
+}
+
 public class AnalisisVentas
 {
     public DateTime Desde { get; set; }
@@ -73,6 +98,10 @@ public class AnalisisVentas
     // Entradas vendidas por zona o tipo de entrada, y organizadores con más ingresos en el período
     public List<ZonaAnalisis> PorZona { get; set; } = new();
     public List<OrganizadorAnalisis> TopOrganizadores { get; set; } = new();
+
+    // Asistencia por rango de edad en los eventos realizados del período. Solo para el administrador.
+    public List<EdadAnalisis> PorEdad { get; set; } = new();
+    public int EntradasSinEdad { get; set; }
 
     // En qué terminaron las órdenes creadas en el período: pagadas, reservas activas, vencidas…
     public List<ConteoEtiqueta> OrdenesPorEstado { get; set; } = new();

@@ -270,6 +270,14 @@ using (var scope = app.Services.CreateScope())
 
     await DbInitializer.ReubicarAsientosAsync(db, app.Logger);
 
+    // Datos de prueba: solo en desarrollo y solo si se piden con --datos-prueba
+    if (app.Environment.IsDevelopment() && args.Contains("--datos-prueba"))
+    {
+        await DatosPrueba.GenerarAsync(scope.ServiceProvider, app.Logger);
+        await DatosPruebaHistoria.AmpliarAsync(scope.ServiceProvider, app.Logger);
+        await DatosPruebaHistoria.AsignarEdadesAsync(scope.ServiceProvider, app.Logger);
+    }
+
     // Falla al arrancar (y no al primer pago) si falta la clave para firmar los QR en producción
     scope.ServiceProvider.GetRequiredService<IQrEntradaService>();
 

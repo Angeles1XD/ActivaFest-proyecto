@@ -81,6 +81,9 @@ namespace ActivaFest.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("TEXT");
 

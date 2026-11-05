@@ -55,6 +55,7 @@ namespace ActivaFest.Controllers
                 UserName = model.Email,
                 Email = model.Email,
                 NombreCompleto = model.NombreCompleto.Trim(),
+                FechaNacimiento = model.FechaNacimiento!.Value.Date,
                 AceptaTratamientoDatos = model.AceptaTratamientoDatos,
                 AceptaPromociones = model.AceptaPromociones
             };

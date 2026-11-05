@@ -8,6 +8,23 @@ namespace ActivaFest.Models
         public override bool IsValid(object? value) => value is true;
     }
 
+    public class FechaNacimientoValidaAttribute : ValidationAttribute
+    {
+        protected override ValidationResult? IsValid(object? value, ValidationContext context)
+        {
+            if (value is not DateTime nacimiento)
+                return ValidationResult.Success;   // que falte la fecha lo avisa [Required]
+
+            var hoy = DateTime.Today;
+            if (nacimiento.Date > hoy || EdadUsuario.En(nacimiento, hoy) > EdadUsuario.Maxima)
+                return new ValidationResult("Ingresa una fecha de nacimiento válida.");
+            if (EdadUsuario.En(nacimiento, hoy) < EdadUsuario.Minima)
+                return new ValidationResult($"Debes tener al menos {EdadUsuario.Minima} años para crear una cuenta.");
+
+            return ValidationResult.Success;
+        }
+    }
+
     public class LoginViewModel
     {
         [Required(ErrorMessage = "Ingresa tu correo.")]
@@ -37,6 +54,12 @@ namespace ActivaFest.Models
         [EmailAddress(ErrorMessage = "Correo no válido.")]
         [Display(Name = "Correo electrónico")]
         public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Ingresa tu fecha de nacimiento.")]
+        [DataType(DataType.Date)]
+        [FechaNacimientoValida]
+        [Display(Name = "Fecha de nacimiento")]
+        public DateTime? FechaNacimiento { get; set; }
 
         [Required(ErrorMessage = "Ingresa una contraseña.")]
         [StringLength(100, MinimumLength = 8, ErrorMessage = "La contraseña debe tener al menos 8 caracteres.")]

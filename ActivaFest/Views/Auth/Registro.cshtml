@@ -21,6 +21,12 @@
             <span asp-validation-for="Email" class="text-danger"></span>
         </div>
 
+        <div class="campo">
+            <label asp-for="FechaNacimiento"></label>
+            <input asp-for="FechaNacimiento" autocomplete="bday" required max="@DateTime.Today.AddYears(-EdadUsuario.Minima).ToString("yyyy-MM-dd")" />
+            <span class="texto-suave">Solo para estadísticas por rango de edad. Debes tener al menos @EdadUsuario.Minima años.</span><br />
+            <span asp-validation-for="FechaNacimiento" class="text-danger"></span>
+        </div>
 
         <div class="campo">
             <label asp-for="Password"></label>

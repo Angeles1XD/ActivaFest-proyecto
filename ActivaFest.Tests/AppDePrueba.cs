@@ -106,6 +106,7 @@ public static class Formularios
             ["__RequestVerificationToken"] = await TokenAsync(cliente, "/Auth/Registro"),
             ["NombreCompleto"] = "Ana Pérez",
             ["Email"] = email,
+            ["FechaNacimiento"] = "2000-05-20",
             ["Password"] = password,
             ["ConfirmarPassword"] = password,
             ["AceptaTratamientoDatos"] = consiente ? "true" : "false",

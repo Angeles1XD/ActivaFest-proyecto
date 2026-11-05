@@ -528,6 +528,9 @@ public class AnaliticaService : IAnaliticaService
                 .Select(c => new CompradorAnalisis(c.Codigo, c.Segmento, c.Compras, c.Entradas, c.Gasto))
                 .ToList();
             a.Segmentos = await ResumenSegmentosAsync(ct);
+
+            // ---------- Asistencia por rango de edad ----------
+            await CalcularEdadesAsync(a, f, ct);
         }
 
         // ---------- Próximos eventos con baja ocupación ----------
@@ -535,6 +538,40 @@ public class AnaliticaService : IAnaliticaService
 
         a.Recomendaciones = Recomendador.De(a);
         return a;
+    }
+
+    // Por fecha del evento y no de la compra: solo en un evento ya realizado se sabe quién asistió.
+    // Cada entrada cuenta con la edad de la cuenta que la compró (no se sabe quién usó las entradas de un grupo).
+    private async Task CalcularEdadesAsync(AnalisisVentas a, FiltroAnalitica f, CancellationToken ct)
+    {
+        var ahora = DateTime.Now;
+        var finPeriodo = f.Hasta.AddDays(1);
+        var fin = finPeriodo < ahora ? finPeriodo : ahora;
+        var eventos = EventosDe(f).Where(e => e.Estado == EstadoEvento.Aprobado && e.Fecha >= f.Desde && e.Fecha < fin);
+
+        var entradas = await (
+                from entrada in _db.Entradas.AsNoTracking()
+                join evento in eventos on entrada.EventoId equals evento.Id
+                join usuario in _db.Users.AsNoTracking() on entrada.UsuarioId equals usuario.Id
+                where entrada.Estado != EstadoEntrada.Anulada
+                select new { usuario.Id, usuario.FechaNacimiento, evento.Fecha, Categoria = evento.Categoria!.Nombre, entrada.Estado })
+            .ToListAsync(ct);
+
+        a.EntradasSinEdad = entradas.Count(e => e.FechaNacimiento == null);
+
+        var porRango = entradas.Where(e => e.FechaNacimiento != null)
+            .ToLookup(e => RangoEdad.De(EdadUsuario.En(e.FechaNacimiento!.Value, e.Fecha)));
+
+        a.PorEdad = RangoEdad.Todos.Where(r => porRango[r].Any()).Select(r =>
+        {
+            var delRango = porRango[r].ToList();
+            var categorias = delRango.GroupBy(e => e.Categoria)
+                .Select(g => new CategoriaEdad(g.Key, g.Count(e => e.Estado == EstadoEntrada.Usada)))
+                .OrderByDescending(c => c.Asistieron).ThenBy(c => c.Categoria)
+                .ToList();
+            return new EdadAnalisis(r, delRango.Select(e => e.Id).Distinct().Count(), delRango.Count,
+                delRango.Count(e => e.Estado == EstadoEntrada.Usada), categorias);
+        }).ToList();
     }
 
     private async Task<TotalesPlataforma> AcumuladoAsync(FiltroAnalitica f, CancellationToken ct)

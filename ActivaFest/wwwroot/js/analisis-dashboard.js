@@ -189,6 +189,39 @@
         verTabla('tablaOrdenes', ['Estado', 'Órdenes'], a.ordenesPorEstado.map(o => [o.etiqueta, '>' + entero(o.total)]));
     }
 
+    // Asistencia por rango de edad (solo en el dashboard del administrador)
+    function pintarEdades(a) {
+        if (!$('graficoEdades')) return;
+        const edades = a.porEdad;
+        const etiquetas = edades.map(e => e.rango);
+
+        // Las 5 categorías con más asistentes y el resto junto: más series no se distinguen en el gráfico
+        const totales = {};
+        edades.forEach(e => e.porCategoria.forEach(c => { totales[c.categoria] = (totales[c.categoria] || 0) + c.asistieron; }));
+        const nombres = Object.keys(totales).sort((x, y) => totales[y] - totales[x]);
+        const principales = nombres.slice(0, 5);
+        const asistieron = (e, nombre) => (e.porCategoria.find(c => c.categoria === nombre) || { asistieron: 0 }).asistieron;
+        const otras = e => e.asistieron - principales.reduce((s, n) => s + asistieron(e, n), 0);
+
+        const series = principales.map(n => ({ nombre: n, valores: edades.map(e => asistieron(e, n)) }));
+        if (nombres.length > principales.length)
+            series.push({ nombre: 'Otras', valores: edades.map(otras) });
+
+        grafico('graficoEdades', { tipo: 'stacked', serie: 'Asistentes', etiquetas: etiquetas, valores: edades.map(e => e.asistieron), series: series });
+        verTabla('tablaEdades', ['Edad'].concat(series.map(s => s.nombre)),
+            edades.map((e, i) => [e.rango].concat(series.map(s => '>' + entero(s.valores[i])))));
+
+        // Se resalta la cantidad y no el porcentaje: 8 de 8 entradas da 100 %, pero no es el rango que más asiste
+        barras('graficoAsistenciaEdad', etiquetas, edades.map(e => e.asistieron), { serie: 'Asistieron', formato: entero, enteros: true, resaltar: true });
+        verTabla('tablaAsistenciaEdad', ['Edad', 'Personas', 'Entradas', 'Asistieron', 'Asistencia', 'Tipo de evento favorito'],
+            edades.map(e => [e.rango, '>' + entero(e.personas), '>' + entero(e.entradas), '>' + entero(e.asistieron), '>' + pct(e.asistencia), '>' + (e.categoriaFavorita || '—')]));
+
+        const conEdad = edades.reduce((s, e) => s + e.entradas, 0);
+        const total = conEdad + a.entradasSinEdad;
+        $('edadCobertura').textContent = total === 0 ? '' :
+            `${entero(conEdad)} de ${entero(total)} entradas tienen la edad de su comprador. Las demás son de cuentas sin fecha de nacimiento y no se cuentan.`;
+    }
+
     // celdas: texto o un nodo (enlaces). Las columnas que empiezan con ">" van alineadas a la derecha.
     function tabla(cuerpo, filas, columnas, textoVacio) {
         if (!cuerpo) return;
@@ -343,6 +376,7 @@
             pintarAcumulado(a.acumulado);
             pintarVentasEnElTiempo(a);
             pintarDistribucion(a);
+            pintarEdades(a);
             pintarComparativas(a);
             pintarEventos(a);
             pintarCompradores(a);
